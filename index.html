@@ -99,6 +99,7 @@
 import * as THREE from 'three';
 import { PointerLockControls } from './lib/PointerLockControls.js';
 import { OrbitControls } from './lib/OrbitControls.js';
+import { RoomEnvironment } from './lib/environments/RoomEnvironment.js';
 
 /* ============================================================
    尺寸來源（Andy 提供 + 平面圖比例反推）
@@ -125,6 +126,55 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.05;
 document.getElementById('app').appendChild(renderer.domElement);
 
+/* ---------- 環境光照（IBL）：讓材質有真實的反射與漫射 ---------- */
+const pmrem = new THREE.PMREMGenerator(renderer);
+pmrem.compileEquirectangularShader();
+const envRT = pmrem.fromScene(new RoomEnvironment(), 0.035);
+scene.environment = envRT.texture;
+scene.environmentIntensity = 0.85;
+
+/* ---------- 真實材質貼圖（Poly Haven, CC0 可商用） ---------- */
+const ANISO = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+const TL = new THREE.TextureLoader();
+function tx(f, srgb){
+  const t = TL.load('./lib/tex/'+f);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.anisotropy = ANISO;
+  if(srgb) t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+const TEX = {};
+for(const k of ['wood','tile','wall'])
+  TEX[k] = {d:tx(k+'_Diffuse.jpg',true), n:tx(k+'_nor_gl.jpg'), a:tx(k+'_arm.jpg')};
+// 一張貼圖對應幾公尺（越小＝紋理越密）
+const TSCALE = {wood:1.55, tile:1.15, wall:2.10};
+const pbrCache = new Map();
+/** 依實際尺寸產生不變形的 PBR 材質；u 對應 w、v 對應 h（單位：公尺） */
+function pbr(kind, w, h, extra){
+  const s = TSCALE[kind];
+  const rx = Math.max(.25,+(w/s).toFixed(2)), ry = Math.max(.25,+(h/s).toFixed(2));
+  const key = kind+'|'+rx+'|'+ry+'|'+(extra?JSON.stringify(extra):'');
+  if(pbrCache.has(key)) return pbrCache.get(key);
+  const t = TEX[kind];
+  const c = o=>{ const n=o.clone(); n.repeat.set(rx,ry); return n; };
+  const base = {
+    map:c(t.d), normalMap:c(t.n),
+    aoMap:c(t.a), roughnessMap:c(t.a), metalnessMap:c(t.a),
+    roughness:1, metalness:1,
+  };
+  if(kind==='wall'){          // 室內油漆牆：只要細微凹凸，不要水泥髒污花紋
+    delete base.map;
+    base.normalScale = new THREE.Vector2(.28,.28);
+    base.roughness = .93;
+    delete base.roughnessMap;
+    base.metalness = 0;
+    delete base.metalnessMap;
+  }
+  const m = new THREE.MeshStandardMaterial(Object.assign(base, extra||{}));
+  pbrCache.set(key, m);
+  return m;
+}
+
 /* ---------- 材質 ---------- */
 const M = {
   wall  : new THREE.MeshStandardMaterial({color:0xf2efe9, roughness:.95}),
@@ -146,6 +196,17 @@ const M = {
   stone : new THREE.MeshStandardMaterial({color:0x33383f, roughness:.35}),
   green : new THREE.MeshStandardMaterial({color:0x4a7c52, roughness:.85}),
 };
+// 標記哪些材質要換成真實貼圖（色調用 extra.color 保留原本配色）
+M.wall.kind  = 'wall';  M.wall.tint  = 0xf2efe9;
+M.wallO.kind = 'wall';  M.wallO.tint = 0xe6e1d8;
+M.woodF.kind = 'wood';  M.woodF.tint = 0xc59a68;
+M.tileF.kind = 'tile';  M.tileF.tint = 0xe2ded6;
+M.wetF.kind  = 'tile';  M.wetF.tint  = 0xbfc4c6;
+M.balcF.kind = 'tile';  M.balcF.tint = 0xa3a19c;
+/** 有 kind 的話換成同尺寸的真實貼圖材質 */
+function skin(mat, w, h){
+  return mat && mat.kind ? pbr(mat.kind, w, h, {color:mat.tint}) : mat;
+}
 
 /* ---------- 幾何小工具 ---------- */
 const colliders = [];  // 碰撞用 AABB
@@ -169,8 +230,9 @@ function wall(axis, a, b, fixed, t, holes=[], mat=M.wall){
   const seg = (s,e,y0,y1,solid=true)=>{
     if(e-s < 0.001 || y1-y0 < 0.001) return;
     const L = e-s, cy = (y0+y1)/2, hh = y1-y0, c = (s+e)/2;
-    if(axis==='x') box(L,hh,t,mat,c,cy,fixed,solid);
-    else           box(t,hh,L,mat,fixed,cy,c,solid);
+    const mm = skin(mat, L, hh);
+    if(axis==='x') box(L,hh,t,mm,c,cy,fixed,solid);
+    else           box(t,hh,L,mm,fixed,cy,c,solid);
   };
   for(const h of holes){
     const s = h.at - h.w/2, e = h.at + h.w/2;
@@ -195,7 +257,7 @@ function wall(axis, a, b, fixed, t, holes=[], mat=M.wall){
 }
 
 function floorSlab(x0,z0,x1,z1,mat,y=0.02){
-  const g = new THREE.Mesh(new THREE.BoxGeometry(x1-x0,0.04,z1-z0),mat);
+  const g = new THREE.Mesh(new THREE.BoxGeometry(x1-x0,0.04,z1-z0),skin(mat,x1-x0,z1-z0));
   g.position.set((x0+x1)/2,y,(z0+z1)/2); g.receiveShadow = true; scene.add(g);
 }
 
@@ -413,7 +475,7 @@ box(1.85,0.06,0.06,M.metal,1.70,2.35,8.75,false);       // 曬衣桿
 /* ============================================================
    燈光
    ============================================================ */
-const hemi = new THREE.HemisphereLight(0xdfeaff,0x6b6355,1.9); scene.add(hemi);
+const hemi = new THREE.HemisphereLight(0xdfeaff,0x6b6355,0.75); scene.add(hemi);
 const sun  = new THREE.DirectionalLight(0xfff0dc,2.3);
 sun.position.set(-7,13,-11); sun.castShadow = true;
 sun.shadow.mapSize.set(2048,2048);
@@ -597,7 +659,8 @@ document.getElementById('m-day').onclick=()=>{
   night=!night;
   sun.intensity   = night?0.12:2.3;
   fill.intensity  = night?0.06:0.5;
-  hemi.intensity  = night?0.30:1.9;
+  hemi.intensity  = night?0.12:0.75;
+  scene.environmentIntensity = night?0.22:0.85;
   scene.background.set(night?0x05070b:0x0e1218);
   ceilLights.forEach(p=>p.intensity = night?11:5.5);
   renderer.toneMappingExposure = night?1.25:1.05;
