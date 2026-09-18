@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>A8 戶 3D 看屋 — 27坪 三房兩廳</title>
+<style>
+  html,body{margin:0;height:100%;overflow:hidden;background:#11141a;
+    font-family:"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;color:#fff}
+  #app{position:fixed;inset:0}
+  #hud{position:fixed;left:16px;top:16px;background:rgba(14,18,26,.82);
+    border:1px solid rgba(255,255,255,.14);border-radius:14px;padding:14px 16px;
+    font-size:13px;line-height:1.85;backdrop-filter:blur(10px);max-width:270px;z-index:10}
+  #hud h1{margin:0 0 8px;font-size:15px;letter-spacing:.5px}
+  #hud .k{display:inline-block;background:#2a3444;border:1px solid #3d4b5f;border-radius:5px;
+    padding:1px 7px;margin-right:4px;font-size:11px;font-weight:600}
+  #hud .dim{color:#93a3b8;font-size:11.5px}
+  #room{position:fixed;left:50%;bottom:34px;transform:translateX(-50%);
+    background:rgba(14,18,26,.85);border:1px solid rgba(255,255,255,.14);
+    border-radius:999px;padding:9px 26px;font-size:16px;font-weight:600;letter-spacing:2px;z-index:10}
+  #room small{display:block;font-size:11px;font-weight:400;color:#93a3b8;letter-spacing:.5px;text-align:center}
+  #start{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+    background:rgba(8,10,14,.9);z-index:50;cursor:pointer;flex-direction:column;gap:14px}
+  #start .box{background:#161c26;border:1px solid #2c3746;border-radius:18px;
+    padding:34px 46px;text-align:center;max-width:420px}
+  #start h2{margin:0 0 10px;font-size:22px}
+  #start p{margin:6px 0;color:#9fb0c4;font-size:13.5px;line-height:1.8}
+  #start .go{margin-top:18px;background:#3b82f6;border-radius:10px;padding:12px 30px;
+    font-weight:700;font-size:15px;display:inline-block}
+  #modes{position:fixed;right:16px;top:16px;display:flex;flex-direction:column;gap:8px;z-index:10}
+  #modes button{background:rgba(14,18,26,.85);color:#fff;border:1px solid rgba(255,255,255,.16);
+    border-radius:10px;padding:9px 15px;font-size:13px;cursor:pointer;font-family:inherit;
+    transition:.15s;min-width:132px;text-align:left}
+  #modes button:hover{background:#243044;border-color:#4b5f7a}
+  #modes button.on{background:#3b82f6;border-color:#60a5fa}
+  #jump{position:fixed;right:16px;top:150px;background:rgba(14,18,26,.85);
+    border:1px solid rgba(255,255,255,.14);border-radius:12px;padding:10px;z-index:10;width:132px}
+  #jump div{font-size:11px;color:#93a3b8;margin-bottom:6px;letter-spacing:1px}
+  #jump button{display:block;width:100%;background:#1d2532;color:#dbe6f3;border:1px solid #2f3b4d;
+    border-radius:7px;padding:6px 8px;margin-bottom:5px;font-size:12.5px;cursor:pointer;
+    font-family:inherit;text-align:left}
+  #jump button:hover{background:#2c3a4e}
+  #note{position:fixed;left:16px;bottom:16px;font-size:11px;color:#6b7a8d;z-index:10;line-height:1.7}
+  .cross{position:fixed;left:50%;top:50%;width:6px;height:6px;margin:-3px 0 0 -3px;
+    border-radius:50%;background:rgba(255,255,255,.5);z-index:5;pointer-events:none}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div class="cross" id="cross" style="display:none"></div>
+
+<div id="hud">
+  <h1>A8 戶 · 3D 看屋</h1>
+  <div class="dim">室內 27 坪（89.3 ㎡）＋工作陽台 1.8 坪<br>樓高 3.25 m ・ 三房兩廳兩衛</div>
+  <hr style="border:0;border-top:1px solid #2b3545;margin:10px 0">
+  <div>
+    <span class="k">W A S D</span>走動<br>
+    <span class="k">滑鼠</span>轉頭看<br>
+    <span class="k">Shift</span>快走　<span class="k">空白</span>站高看<br>
+    <span class="k">Esc</span>放開滑鼠
+  </div>
+</div>
+
+<div id="modes">
+  <button id="m-walk" class="on">🚶 走進去看</button>
+  <button id="m-bird">🏠 俯瞰全屋</button>
+  <button id="m-roof">🔲 屋頂開關</button>
+  <button id="m-day">🌤 白天 / 夜晚</button>
+</div>
+
+<div id="jump">
+  <div>快速傳送</div>
+  <button data-go="客廳">客廳</button>
+  <button data-go="餐廳">餐廳</button>
+  <button data-go="主臥室">主臥室</button>
+  <button data-go="臥室二">臥室二</button>
+  <button data-go="臥室三">臥室三</button>
+  <button data-go="主浴廁">主浴廁</button>
+  <button data-go="廚房">廚房</button>
+  <button data-go="工作陽台">工作陽台</button>
+</div>
+
+<div id="room">客廳<small>站在這裡</small></div>
+<div id="note">比例重建模型 · 依「客廳窗 336.5cm ／ 室內 27 坪 ／ 樓高 3.25m」推算<br>非施工圖，實際尺寸以建商圖說為準</div>
+
+<div id="start"><div class="box">
+  <h2>🏠 準備進入你家</h2>
+  <p>點一下畫面 → 滑鼠會被鎖住，就可以像玩遊戲一樣在屋子裡走動。</p>
+  <p>想退出來，按鍵盤左上角的 <b>Esc</b>。</p>
+  <p style="color:#6b7a8d">不想走路的話，右上角有「俯瞰全屋」可以直接看格局。</p>
+  <div class="go">點擊進入</div>
+</div></div>
+
+<script type="importmap">
+{"imports":{"three":"./lib/three.module.js","three/addons/":"./lib/"}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { PointerLockControls } from './lib/PointerLockControls.js';
+import { OrbitControls } from './lib/OrbitControls.js';
+
+/* ============================================================
+   尺寸來源（Andy 提供 + 平面圖比例反推）
+   室內 27 坪 = 89.26 ㎡ ／ 工作陽台 1.8 坪 = 5.95 ㎡
+   客廳採光窗 336.5 cm ／ 樓高 H = 3.25 m
+   座標：X 向東（平面圖右）、Z 向南（平面圖下）、Y 向上
+   ============================================================ */
+const H  = 3.25;            // 樓高
+const TW = 0.25;            // 外牆厚
+const IW = 0.12;            // 隔間牆厚
+const W  = 9.45, D = 10.75; // 全屋外圍
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0e1218);
+scene.fog = new THREE.Fog(0x0e1218, 30, 70);
+
+const camera = new THREE.PerspectiveCamera(72, innerWidth/innerHeight, 0.05, 250);
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setSize(innerWidth,innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+document.getElementById('app').appendChild(renderer.domElement);
+
+/* ---------- 材質 ---------- */
+const M = {
+  wall  : new THREE.MeshStandardMaterial({color:0xf2efe9, roughness:.95}),
+  wallO : new THREE.MeshStandardMaterial({color:0xe6e1d8, roughness:.95}),
+  woodF : new THREE.MeshStandardMaterial({color:0xb08453, roughness:.72}),
+  tileF : new THREE.MeshStandardMaterial({color:0xd9d5cd, roughness:.42, metalness:.02}),
+  wetF  : new THREE.MeshStandardMaterial({color:0xb9bcbb, roughness:.35}),
+  balcF : new THREE.MeshStandardMaterial({color:0x9c9a96, roughness:.9}),
+  glass : new THREE.MeshPhysicalMaterial({color:0xbfe0f5, transparent:true, opacity:.20,
+           roughness:.03, metalness:0, transmission:.85, side:THREE.DoubleSide}),
+  frame : new THREE.MeshStandardMaterial({color:0x3a3f45, roughness:.5, metalness:.5}),
+  wood  : new THREE.MeshStandardMaterial({color:0x8a6240, roughness:.6}),
+  woodD : new THREE.MeshStandardMaterial({color:0x5d4230, roughness:.6}),
+  fab   : new THREE.MeshStandardMaterial({color:0x6f7f93, roughness:.92}),
+  fabL  : new THREE.MeshStandardMaterial({color:0xe8e2d6, roughness:.95}),
+  white : new THREE.MeshStandardMaterial({color:0xfbfbfa, roughness:.35}),
+  metal : new THREE.MeshStandardMaterial({color:0xb9c0c7, roughness:.28, metalness:.85}),
+  dark  : new THREE.MeshStandardMaterial({color:0x22262b, roughness:.45}),
+  stone : new THREE.MeshStandardMaterial({color:0x33383f, roughness:.35}),
+  green : new THREE.MeshStandardMaterial({color:0x4a7c52, roughness:.85}),
+};
+
+/* ---------- 幾何小工具 ---------- */
+const colliders = [];  // 碰撞用 AABB
+function box(w,h,d,mat,x,y,z,solid=true,rotY=0){
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);
+  m.position.set(x,y,z); m.rotation.y = rotY;
+  m.castShadow = true; m.receiveShadow = true;
+  scene.add(m);
+  if(solid && rotY===0) colliders.push({x0:x-w/2,x1:x+w/2,z0:z-d/2,z1:z+d/2,y1:y+h/2});
+  return m;
+}
+
+/**
+ * 造一道牆，可留門洞 / 窗洞
+ * a,b = 沿軸起訖；fixed = 另一軸座標；axis='x' 表示牆沿 X 延伸
+ * holes = [{at,w,y0,y1,glass}]  at=洞中心沿軸座標
+ */
+function wall(axis, a, b, fixed, t, holes=[], mat=M.wall){
+  holes = [...holes].sort((p,q)=>p.at-q.at);
+  let cur = a;
+  const seg = (s,e,y0,y1,solid=true)=>{
+    if(e-s < 0.001 || y1-y0 < 0.001) return;
+    const L = e-s, cy = (y0+y1)/2, hh = y1-y0, c = (s+e)/2;
+    if(axis==='x') box(L,hh,t,mat,c,cy,fixed,solid);
+    else           box(t,hh,L,mat,fixed,cy,c,solid);
+  };
+  for(const h of holes){
+    const s = h.at - h.w/2, e = h.at + h.w/2;
+    seg(cur, s, 0, H);                       // 洞左邊的實牆
+    if(h.y0 > 0.001) seg(s, e, 0, h.y0);     // 洞下方矮牆（窗台）
+    if(h.y1 < H-0.001) seg(s, e, h.y1, H);   // 洞上方過樑
+    if(h.glass){                             // 玻璃
+      const gh = h.y1-h.y0, gy = (h.y0+h.y1)/2;
+      if(axis==='x'){
+        box(h.w-0.06,gh,0.03,M.glass,h.at,gy,fixed,false);
+        box(h.w,0.05,t*1.05,M.frame,h.at,h.y0,fixed,false);
+        box(h.w,0.05,t*1.05,M.frame,h.at,h.y1,fixed,false);
+      }else{
+        box(0.03,gh,h.w-0.06,M.glass,fixed,gy,h.at,false);
+        box(t*1.05,0.05,h.w,M.frame,fixed,h.y0,h.at,false);
+        box(t*1.05,0.05,h.w,M.frame,fixed,h.y1,h.at,false);
+      }
+    }
+    cur = e;
+  }
+  seg(cur, b, 0, H);
+}
+
+function floorSlab(x0,z0,x1,z1,mat,y=0.02){
+  const g = new THREE.Mesh(new THREE.BoxGeometry(x1-x0,0.04,z1-z0),mat);
+  g.position.set((x0+x1)/2,y,(z0+z1)/2); g.receiveShadow = true; scene.add(g);
+}
+
+/* ============================================================
+   房間表（公尺）— 依平面圖比例重建
+   ============================================================ */
+const R = {
+  '主臥室' : {x0:0.13, z0:0.13, x1:3.55, z1:3.30, f:M.woodF, area:10.8},
+  '臥室二' : {x0:3.67, z0:0.13, x1:6.05, z1:2.95, f:M.woodF, area:6.7},
+  '客廳'   : {x0:6.17, z0:0.13, x1:9.32, z1:4.25, f:M.woodF, area:13.0},
+  '餐廳'   : {x0:6.17, z0:4.25, x1:9.32, z1:7.05, f:M.woodF, area:8.8},
+  '主浴廁' : {x0:0.40, z0:3.50, x1:3.90, z1:5.78, f:M.wetF,  area:8.0},
+  '臥室三' : {x0:0.40, z0:5.95, x1:4.45, z1:8.08, f:M.woodF, area:8.6},
+  '走廊'   : {x0:4.45, z0:3.30, x1:6.05, z1:8.08, f:M.woodF, area:7.6},
+  '廚房'   : {x0:3.30, z0:8.35, x1:6.40, z1:10.45,f:M.tileF, area:6.5},
+  '次浴廁' : {x0:6.60, z0:8.35, x1:8.80, z1:10.35,f:M.wetF,  area:4.4},
+  '工作陽台':{x0:0.13, z0:8.35, x1:3.10, z1:10.30,f:M.balcF, area:5.8},
+};
+
+/* ---------- 地板 ---------- */
+floorSlab(0,0,W,D,new THREE.MeshStandardMaterial({color:0xcfc7ba,roughness:.9}),0.0);
+for(const k in R){ const r=R[k]; floorSlab(r.x0,r.z0,r.x1,r.z1,r.f,0.025); }
+// 走道／玄關補地板
+floorSlab(0.13,3.30,4.45,3.50,M.woodF,0.025);
+floorSlab(0.13,5.78,4.45,5.95,M.woodF,0.025);
+floorSlab(0.13,8.08,9.32,8.35,M.tileF,0.025);
+floorSlab(6.17,7.05,9.32,8.35,M.woodF,0.025);
+// 天花板
+const roof = box(W,0.12,D,M.wallO,W/2,H+0.06,D/2,false);
+
+/* ============================================================
+   牆
+   ============================================================ */
+// ---- 外牆（北面整排採光窗）----
+wall('x',0,W,0.13,TW,[
+  {at:1.85, w:1.90, y0:0.95, y1:2.55, glass:true},   // 主臥窗
+  {at:4.86, w:1.60, y0:0.95, y1:2.55, glass:true},   // 臥室二窗
+  {at:7.74, w:3.365,y0:0.32, y1:2.72, glass:true},   // ★ 客廳採光窗 336.5cm（落地）
+],M.wallO);
+wall('x',0,W,D-0.13,TW,[
+  {at:1.60, w:1.70, y0:0.95, y1:2.35, glass:true},   // 陽台外窗
+  {at:7.60, w:0.70, y0:1.35, y1:2.30, glass:true},   // 次浴小窗
+],M.wallO);
+wall('z',0,D,0.13,TW,[
+  {at:6.95, w:1.40, y0:0.95, y1:2.35, glass:true},   // 臥室三西窗
+],M.wallO);
+wall('z',0,D,W-0.13,TW,[
+  {at:2.30, w:1.50, y0:0.95, y1:2.55, glass:true},   // 客廳東窗
+  {at:5.70, w:1.20, y0:0.95, y1:2.45, glass:true},   // 餐廳東窗
+],M.wallO);
+
+// ---- 室內隔間 ----
+// 主臥 / 臥室二
+wall('z',0.13,3.30,3.61,IW,[]);
+// 主臥 南牆（門）
+wall('x',0.13,3.61,3.30,IW,[{at:3.05,w:0.95,y0:2.10,y1:H}]);
+// 臥室二 南牆（門）
+wall('x',3.61,6.05,2.95,IW,[{at:5.70,w:0.95,y0:2.10,y1:H}]);
+// 客餐廳 西牆（與走廊之間，中段開放）
+wall('z',0.13,7.05,6.11,IW,[
+  {at:1.40,w:1.10,y0:2.10,y1:H},   // 客廳出入口
+  {at:5.30,w:1.60,y0:2.30,y1:H},   // 餐廳大開口
+]);
+// 主浴廁
+wall('x',0.40,3.90,3.50,IW,[{at:3.45,w:0.85,y0:2.05,y1:H}]);
+wall('x',0.40,3.90,5.78,IW,[]);
+wall('z',3.50,5.78,3.96,IW,[]);
+// 臥室三
+wall('x',0.40,4.45,5.95,IW,[]);
+wall('x',0.40,4.45,8.08,IW,[]);
+wall('z',5.95,8.08,4.51,IW,[{at:6.60,w:0.95,y0:2.10,y1:H}]);
+// 南側橫隔牆
+wall('x',0.13,9.32,8.22,IW,[
+  {at:1.60,w:0.90,y0:2.10,y1:H},  // 進工作陽台
+  {at:4.60,w:1.70,y0:2.25,y1:H},  // 進廚房（開放）
+  {at:7.60,w:0.85,y0:2.05,y1:H},  // 進次浴
+]);
+// 工作陽台 / 廚房
+wall('z',8.35,D-0.13,3.18,IW,[]);
+// 廚房 / 次浴
+wall('z',8.35,D-0.13,6.48,IW,[]);
+wall('z',8.35,10.35,8.86,IW,[]);
+wall('x',6.48,8.86,10.40,IW,[]);
+
+/* ============================================================
+   家具
+   ============================================================ */
+function bed(cx,cz,w,l,rot=0){
+  const g = new THREE.Group();
+  const base=new THREE.Mesh(new THREE.BoxGeometry(w,0.30,l),M.woodD); base.position.y=0.17;
+  const mat2=new THREE.Mesh(new THREE.BoxGeometry(w-0.08,0.26,l-0.08),M.fabL); mat2.position.y=0.45;
+  const hb=new THREE.Mesh(new THREE.BoxGeometry(w+0.12,0.95,0.10),M.fab); hb.position.set(0,0.48,-l/2-0.03);
+  [base,mat2,hb].forEach(o=>{o.castShadow=true;o.receiveShadow=true;g.add(o)});
+  for(const s of [-1,1]){
+    const p=new THREE.Mesh(new THREE.BoxGeometry(w*0.36,0.12,0.36),M.white);
+    p.position.set(s*w*0.22,0.62,-l/2+0.32); p.castShadow=true; g.add(p);
+  }
+  g.position.set(cx,0.04,cz); g.rotation.y=rot; scene.add(g);
+  colliders.push({x0:cx-w/2,x1:cx+w/2,z0:cz-l/2,z1:cz+l/2,y1:0.6});
+}
+function wardrobe(cx,cz,w,d,rot=0){
+  const g=new THREE.Group();
+  const b=new THREE.Mesh(new THREE.BoxGeometry(w,2.35,d),M.wood); b.position.y=1.18;
+  b.castShadow=true; g.add(b);
+  for(let i=0;i<Math.max(2,Math.round(w/0.55));i++){
+    const ln=new THREE.Mesh(new THREE.BoxGeometry(0.015,2.2,0.015),M.dark);
+    ln.position.set(-w/2+ (i+1)*w/Math.max(2,Math.round(w/0.55)),1.18,d/2+0.01); g.add(ln);
+  }
+  g.position.set(cx,0.04,cz); g.rotation.y=rot; scene.add(g);
+  colliders.push({x0:cx-w/2,x1:cx+w/2,z0:cz-d/2,z1:cz+d/2,y1:2.3});
+}
+function sofa(cx,cz,w,rot=0){
+  const g=new THREE.Group();
+  const s=new THREE.Mesh(new THREE.BoxGeometry(w,0.42,0.92),M.fab); s.position.y=0.30;
+  const b=new THREE.Mesh(new THREE.BoxGeometry(w,0.62,0.22),M.fab); b.position.set(0,0.55,-0.36);
+  [s,b].forEach(o=>{o.castShadow=true;g.add(o)});
+  for(const sgn of [-1,1]){
+    const a=new THREE.Mesh(new THREE.BoxGeometry(0.20,0.28,0.92),M.fab);
+    a.position.set(sgn*(w/2-0.1),0.60,0); a.castShadow=true; g.add(a);
+  }
+  g.position.set(cx,0.04,cz); g.rotation.y=rot; scene.add(g);
+  colliders.push({x0:cx-w/2,x1:cx+w/2,z0:cz-0.5,z1:cz+0.5,y1:0.8});
+}
+function table(cx,cz,w,d,h,mat=M.wood){
+  box(w,0.06,d,mat,cx,h,cz,true);
+  for(const sx of [-1,1]) for(const sz of [-1,1])
+    box(0.07,h,0.07,M.woodD,cx+sx*(w/2-0.1),h/2,cz+sz*(d/2-0.1),false);
+}
+function chair(cx,cz,rot=0){
+  const g=new THREE.Group();
+  const s=new THREE.Mesh(new THREE.BoxGeometry(0.44,0.05,0.44),M.woodD); s.position.y=0.45;
+  const b=new THREE.Mesh(new THREE.BoxGeometry(0.44,0.46,0.05),M.woodD); b.position.set(0,0.70,-0.20);
+  [s,b].forEach(o=>{o.castShadow=true;g.add(o)});
+  for(const sx of [-1,1]) for(const sz of [-1,1]){
+    const l=new THREE.Mesh(new THREE.BoxGeometry(0.045,0.45,0.045),M.woodD);
+    l.position.set(sx*0.18,0.22,sz*0.18); g.add(l);
+  }
+  g.position.set(cx,0.04,cz); g.rotation.y=rot; scene.add(g);
+}
+function counter(x0,z0,x1,z1,h=0.90){
+  box(x1-x0,h,z1-z0,M.white,(x0+x1)/2,h/2,(z0+z1)/2,true);
+  box(x1-x0+0.04,0.05,z1-z0+0.04,M.stone,(x0+x1)/2,h+0.02,(z0+z1)/2,false);
+}
+function toilet(cx,cz,rot=0){
+  const g=new THREE.Group();
+  const b=new THREE.Mesh(new THREE.BoxGeometry(0.38,0.42,0.62),M.white); b.position.y=0.21;
+  const t=new THREE.Mesh(new THREE.BoxGeometry(0.40,0.52,0.20),M.white); t.position.set(0,0.30,-0.32);
+  const s=new THREE.Mesh(new THREE.BoxGeometry(0.40,0.06,0.50),M.white); s.position.set(0,0.44,0.04);
+  [b,t,s].forEach(o=>{o.castShadow=true;g.add(o)});
+  g.position.set(cx,0.04,cz); g.rotation.y=rot; scene.add(g);
+}
+function basin(cx,cz,w=0.60,rot=0){
+  const g=new THREE.Group();
+  const c=new THREE.Mesh(new THREE.BoxGeometry(w,0.78,0.50),M.wood); c.position.y=0.39;
+  const t=new THREE.Mesh(new THREE.BoxGeometry(w+0.04,0.05,0.54),M.stone); t.position.y=0.80;
+  const bo=new THREE.Mesh(new THREE.CylinderGeometry(0.17,0.14,0.14,20),M.white); bo.position.y=0.89;
+  const fa=new THREE.Mesh(new THREE.CylinderGeometry(0.02,0.02,0.26,10),M.metal); fa.position.set(0,0.96,-0.17);
+  const mi=new THREE.Mesh(new THREE.BoxGeometry(w,0.85,0.03),
+      new THREE.MeshStandardMaterial({color:0xdfe9f2,roughness:.05,metalness:.9}));
+  mi.position.set(0,1.62,-0.24);
+  [c,t,bo,fa,mi].forEach(o=>{o.castShadow=true;g.add(o)});
+  g.position.set(cx,0.04,cz); g.rotation.y=rot; scene.add(g);
+}
+
+// 客廳
+sofa(7.75,3.55,2.55,Math.PI);
+table(7.75,2.55,1.15,0.60,0.40);
+box(1.55,0.06,0.42,M.woodD,7.75,0.56,1.05,false);      // 電視櫃檯面
+box(1.45,0.45,0.35,M.wood,7.75,0.30,1.05,true);
+box(1.30,0.75,0.05,M.dark,7.75,1.35,0.95,false);        // 電視
+box(2.60,0.02,1.90,new THREE.MeshStandardMaterial({color:0x8d7f6d,roughness:1}),7.75,0.05,2.85,false);
+// 餐廳
+table(7.70,5.55,1.65,0.92,0.74);
+chair(7.05,5.10,0.4); chair(7.70,5.02,0); chair(8.35,5.10,-0.4);
+chair(7.05,6.02,2.7); chair(7.70,6.10,Math.PI); chair(8.35,6.02,3.5);
+box(0.95,2.05,0.42,M.wood,6.55,1.06,7.55,true);         // 餐邊櫃
+// 主臥
+bed(1.85,1.95,1.70,2.05);
+wardrobe(3.25,1.10,0.62,1.85,Math.PI/2);
+box(1.15,0.45,0.42,M.wood,0.60,0.26,3.00,true);
+// 臥室二
+bed(4.85,1.75,1.45,1.95);
+wardrobe(5.75,0.85,0.60,1.30,Math.PI/2);
+// 臥室三
+bed(1.55,7.05,1.45,1.95,Math.PI/2);
+wardrobe(3.80,6.55,0.60,1.60,Math.PI/2);
+box(1.05,0.72,0.50,M.wood,3.60,0.40,7.70,true);         // 書桌
+chair(3.15,7.55,-Math.PI/2);
+// 主浴廁（浴缸＋雙面盆＋淋浴）
+box(1.72,0.58,0.80,M.white,1.35,0.33,4.15,true);        // 浴缸外體
+box(1.56,0.40,0.64,new THREE.MeshStandardMaterial({color:0xdff0f7,roughness:.1,
+   transparent:true,opacity:.55}),1.35,0.46,4.15,false);
+basin(2.85,3.80,1.10,0);
+toilet(3.55,5.30,Math.PI);
+box(0.04,2.05,1.35,M.glass,2.20,1.06,5.10,false);       // 淋浴玻璃
+box(1.55,0.02,1.35,new THREE.MeshStandardMaterial({color:0x9aa0a3,roughness:.3}),1.42,0.05,5.10,false);
+// 次浴廁
+toilet(7.10,9.95,0);
+basin(8.30,8.75,0.72,Math.PI/2);
+box(0.04,2.05,1.10,M.glass,7.75,1.06,9.70,false);
+// 廚房（ㄇ字）
+counter(3.42,8.45,6.28,9.08);
+counter(3.42,9.20,4.15,10.33);
+box(2.05,0.70,0.36,M.white,4.85,2.05,8.52,false);       // 吊櫃
+box(0.58,1.95,0.62,M.metal,5.95,1.02,9.90,true);        // 冰箱
+box(0.56,0.05,0.45,M.dark,5.15,0.96,8.72,false);        // 爐
+box(0.44,0.02,0.36,M.metal,3.90,0.96,8.72,false);       // 水槽
+// 工作陽台
+box(0.60,0.85,0.62,M.white,0.60,0.46,9.75,true);        // 洗衣機
+box(0.55,0.10,0.55,M.metal,0.60,0.93,9.75,false);
+box(0.50,0.55,0.50,M.balcF,2.55,0.31,9.85,true);        // 水槽台
+box(0.34,0.40,0.34,M.green,2.55,0.80,9.85,false);       // 植栽
+box(1.85,0.06,0.06,M.metal,1.70,2.35,8.75,false);       // 曬衣桿
+
+/* ============================================================
+   燈光
+   ============================================================ */
+const hemi = new THREE.HemisphereLight(0xdfeaff,0x6b6355,1.9); scene.add(hemi);
+const sun  = new THREE.DirectionalLight(0xfff0dc,2.3);
+sun.position.set(-7,13,-11); sun.castShadow = true;
+sun.shadow.mapSize.set(2048,2048);
+const sc = sun.shadow.camera;
+sc.left=-16; sc.right=16; sc.top=16; sc.bottom=-16; sc.near=.5; sc.far=45;
+scene.add(sun);
+const fill = new THREE.DirectionalLight(0xbdd6ff,0.5); fill.position.set(10,8,12); scene.add(fill);
+
+const ceilLights = [];
+for(const k in R){
+  const r = R[k];
+  const p = new THREE.PointLight(0xffe9c8, 5.5, 7.5, 2);
+  p.position.set((r.x0+r.x1)/2, H-0.28, (r.z0+r.z1)/2);
+  scene.add(p); ceilLights.push(p);
+  const bulb = new THREE.Mesh(new THREE.CylinderGeometry(0.16,0.20,0.07,18),
+      new THREE.MeshStandardMaterial({color:0xfff6e6,emissive:0xffdca8,emissiveIntensity:.35}));
+  bulb.position.set((r.x0+r.x1)/2,H-0.16,(r.z0+r.z1)/2); scene.add(bulb);
+}
+
+/* ============================================================
+   房間名稱標籤（俯瞰用）
+   ============================================================ */
+const labels = [];
+for(const k in R){
+  const r = R[k];
+  const cv = document.createElement('canvas'); cv.width=512; cv.height=200;
+  const c = cv.getContext('2d');
+  c.fillStyle='rgba(12,16,22,.78)'; c.roundRect(6,34,500,132,22); c.fill();
+  c.fillStyle='#fff'; c.font='bold 62px "PingFang TC",sans-serif';
+  c.textAlign='center'; c.fillText(k,256,108);
+  c.fillStyle='#9fd0ff'; c.font='36px "PingFang TC",sans-serif';
+  c.fillText(r.area.toFixed(1)+' ㎡ ／ '+(r.area/3.305785).toFixed(1)+' 坪',256,152);
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({
+      map:new THREE.CanvasTexture(cv), transparent:true, depthTest:false}));
+  sp.position.set((r.x0+r.x1)/2, H+0.9, (r.z0+r.z1)/2);
+  sp.scale.set(2.3,0.9,1); sp.visible=false; scene.add(sp); labels.push(sp);
+}
+
+/* ============================================================
+   控制
+   ============================================================ */
+const EYE = 1.62;
+const pl = new PointerLockControls(camera, renderer.domElement);
+scene.add(pl.object);
+const orbit = new OrbitControls(camera, renderer.domElement);
+orbit.enabled=false; orbit.enableDamping=true; orbit.dampingFactor=.07;
+orbit.target.set(W/2,0,D/2);
+
+let mode='walk';
+const keys={};
+addEventListener('keydown',e=>{keys[e.code]=true});
+addEventListener('keyup',e=>{keys[e.code]=false});
+
+const startEl=document.getElementById('start'), crossEl=document.getElementById('cross');
+startEl.addEventListener('click',()=>{ if(mode==='walk') pl.lock(); });
+pl.addEventListener('lock',()=>{startEl.style.display='none';crossEl.style.display='block'});
+pl.addEventListener('unlock',()=>{ if(mode==='walk'){startEl.style.display='flex';crossEl.style.display='none'} });
+
+// 起始位置：客廳
+camera.position.set(7.75, EYE, 2.90);
+camera.lookAt(7.75, EYE, 6.5);
+
+function setMode(m){
+  mode=m;
+  const walk = (m==='walk');
+  orbit.enabled = !walk;
+  document.getElementById('m-walk').classList.toggle('on',walk);
+  document.getElementById('m-bird').classList.toggle('on',!walk);
+  labels.forEach(l=>l.visible=!walk);
+  roof.visible = walk ? roofOn : false;
+  document.getElementById('jump').style.display = walk?'block':'none';
+  document.getElementById('room').style.display = walk?'block':'none';
+  if(walk){
+    scene.fog.near=30;
+    startEl.style.display='flex';
+  }else{
+    pl.unlock(); crossEl.style.display='none'; startEl.style.display='none';
+    scene.fog.near=60;
+    camera.position.set(W/2+9, 15.5, D/2+13);
+    orbit.target.set(W/2,0,D/2); orbit.update();
+  }
+}
+let roofOn=true;
+document.getElementById('m-walk').onclick=()=>setMode('walk');
+document.getElementById('m-bird').onclick=()=>setMode('bird');
+document.getElementById('m-roof').onclick=()=>{roofOn=!roofOn; roof.visible = (mode==='walk')&&roofOn;};
+let night=false;
+document.getElementById('m-day').onclick=()=>{
+  night=!night;
+  sun.intensity   = night?0.12:2.3;
+  fill.intensity  = night?0.06:0.5;
+  hemi.intensity  = night?0.30:1.9;
+  scene.background.set(night?0x05070b:0x0e1218);
+  ceilLights.forEach(p=>p.intensity = night?11:5.5);
+  renderer.toneMappingExposure = night?1.25:1.05;
+};
+document.querySelectorAll('#jump button').forEach(b=>{
+  b.onclick=()=>{
+    const r=R[b.dataset.go]; if(!r) return;
+    if(mode!=='walk') setMode('walk');
+    camera.position.set((r.x0+r.x1)/2, EYE, (r.z0+r.z1)/2);
+  };
+});
+
+/* ---------- 碰撞 ---------- */
+const RAD=0.26;
+function blocked(x,z,y){
+  if(x<0.32||x>W-0.32||z<0.32||z>D-0.32) return true;
+  for(const c of colliders){
+    if(c.y1 < y-0.85) continue;            // 矮過膝的東西可跨過
+    if(x>c.x0-RAD && x<c.x1+RAD && z>c.z0-RAD && z<c.z1+RAD) return true;
+  }
+  return false;
+}
+
+/* ---------- 房間偵測 ---------- */
+const roomEl=document.getElementById('room');
+function whichRoom(x,z){
+  for(const k in R){ const r=R[k];
+    if(x>=r.x0&&x<=r.x1&&z>=r.z0&&z<=r.z1) return k; }
+  return '走廊';
+}
+
+/* ---------- 迴圈 ---------- */
+const clock=new THREE.Clock();
+let lastRoom='';
+function tick(){
+  requestAnimationFrame(tick);
+  const dt=Math.min(clock.getDelta(),0.05);
+  if(mode==='walk' && pl.isLocked){
+    const sp=(keys['ShiftLeft']||keys['ShiftRight']?3.4:1.65)*dt;
+    const f=(keys['KeyW']?1:0)-(keys['KeyS']?1:0);
+    const s=(keys['KeyD']?1:0)-(keys['KeyA']?1:0);
+    if(f||s){
+      const p=camera.position.clone();
+      const dir=new THREE.Vector3(); camera.getWorldDirection(dir); dir.y=0; dir.normalize();
+      const right=new THREE.Vector3().crossVectors(dir,new THREE.Vector3(0,1,0)).normalize();
+      const mv=dir.multiplyScalar(f*sp).add(right.multiplyScalar(s*sp));
+      const eye=camera.position.y;
+      if(!blocked(p.x+mv.x,p.z,eye)) camera.position.x+=mv.x;
+      if(!blocked(camera.position.x,p.z+mv.z,eye)) camera.position.z+=mv.z;
+    }
+    const target = keys['Space']? 2.45 : EYE;
+    camera.position.y += (target-camera.position.y)*Math.min(1,dt*7);
+    const rm=whichRoom(camera.position.x,camera.position.z);
+    if(rm!==lastRoom){
+      lastRoom=rm;
+      const r=R[rm];
+      roomEl.innerHTML = rm + '<small>' + (r? r.area.toFixed(1)+' ㎡ ／ '+(r.area/3.305785).toFixed(1)+' 坪' : '通道') + '</small>';
+    }
+  }else if(mode!=='walk'){ orbit.update(); }
+  renderer.render(scene,camera);
+}
+tick();
+
+addEventListener('resize',()=>{
+  camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth,innerHeight);
+});
+window.__ready = true;
+</script>
+</body>
+</html>
