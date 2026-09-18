@@ -2,6 +2,8 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0e1218">
 <title>A8 戶 3D 看屋 — 27坪 三房兩廳</title>
 <style>
   html,body{margin:0;height:100%;overflow:hidden;background:#11141a;
@@ -52,7 +54,7 @@
   <h1>A8 戶 · 3D 看屋</h1>
   <div class="dim">室內 27 坪（89.3 ㎡）＋工作陽台 1.8 坪<br>樓高 3.25 m ・ 三房兩廳兩衛</div>
   <hr style="border:0;border-top:1px solid #2b3545;margin:10px 0">
-  <div>
+  <div id="hint">
     <span class="k">W A S D</span>走動<br>
     <span class="k">滑鼠</span>轉頭看<br>
     <span class="k">Shift</span>快走　<span class="k">空白</span>站高看<br>
@@ -466,13 +468,104 @@ addEventListener('keydown',e=>{keys[e.code]=true});
 addEventListener('keyup',e=>{keys[e.code]=false});
 
 const startEl=document.getElementById('start'), crossEl=document.getElementById('cross');
-startEl.addEventListener('click',()=>{ if(mode==='walk') pl.lock(); });
+
+/* ---------- 手機 / 平板支援 ---------- */
+// 加 ?touch=1 可強制手機模式、?touch=0 可強制電腦模式（偵測失準時的備用開關）
+const TOUCH = /[?&]touch=1/.test(location.search) ? true
+            : /[?&]touch=0/.test(location.search) ? false
+            : ( matchMedia('(pointer:coarse)').matches
+             || 'ontouchstart' in window
+             || navigator.maxTouchPoints > 0
+             || !('requestPointerLock' in document.documentElement) );
+
+const mstyle=document.createElement('style');
+mstyle.textContent =
+ '#stick{position:fixed;left:20px;bottom:90px;width:124px;height:124px;border-radius:50%;'+
+ 'background:rgba(18,24,34,.5);border:1px solid rgba(255,255,255,.2);z-index:20;display:none;touch-action:none}'+
+ '#knob{position:absolute;left:38px;top:38px;width:48px;height:48px;border-radius:50%;'+
+ 'background:rgba(120,165,225,.9);pointer-events:none}'+
+ '@media (max-width:760px){#hud{max-width:190px;font-size:11px;padding:11px 13px}'+
+ '#hud h1{font-size:14px}#modes button{min-width:104px;font-size:12px;padding:8px 11px}'+
+ '#jump{width:104px;top:auto;bottom:14px}#jump button{font-size:11.5px;padding:5px 7px}'+
+ '#note{display:none}}';
+document.head.appendChild(mstyle);
+
+const stickEl=document.createElement('div'); stickEl.id='stick';
+stickEl.innerHTML='<div id="knob"></div>';
+document.body.appendChild(stickEl);
+const knobEl=stickEl.firstElementChild;
+
+let mobF=0, mobS=0, stickId=null;
+function stickAt(t){
+  const r=stickEl.getBoundingClientRect();
+  let dx=t.clientX-(r.left+r.width/2), dy=t.clientY-(r.top+r.height/2);
+  const max=r.width/2-24, d=Math.hypot(dx,dy);
+  if(d>max && d>0){ dx*=max/d; dy*=max/d; }
+  knobEl.style.left=(r.width/2-24+dx)+'px';
+  knobEl.style.top =(r.height/2-24+dy)+'px';
+  mobS=dx/max; mobF=-dy/max;
+}
+function stickReset(){ stickId=null; mobF=mobS=0; knobEl.style.left='38px'; knobEl.style.top='38px'; }
+stickEl.addEventListener('touchstart',e=>{ const t=e.changedTouches[0]; stickId=t.identifier; stickAt(t); e.preventDefault(); },{passive:false});
+stickEl.addEventListener('touchmove', e=>{ for(const t of e.changedTouches) if(t.identifier===stickId) stickAt(t); e.preventDefault(); },{passive:false});
+const stickEnd=e=>{ for(const t of e.changedTouches) if(t.identifier===stickId) stickReset(); };
+stickEl.addEventListener('touchend',stickEnd); stickEl.addEventListener('touchcancel',stickEnd);
+
+// 手指拖曳＝轉頭
+let lookId=null, lx=0, ly=0;
+renderer.domElement.addEventListener('touchstart',e=>{
+  if(!TOUCH || mode!=='walk' || startEl.style.display!=='none') return;
+  const t=e.changedTouches[0]; lookId=t.identifier; lx=t.clientX; ly=t.clientY;
+},{passive:true});
+renderer.domElement.addEventListener('touchmove',e=>{
+  if(lookId===null || mode!=='walk') return;
+  for(const t of e.changedTouches){
+    if(t.identifier!==lookId) continue;
+    camera.rotation.y -= (t.clientX-lx)*0.005;
+    camera.rotation.x  = Math.max(-1.35, Math.min(1.35, camera.rotation.x-(t.clientY-ly)*0.005));
+    lx=t.clientX; ly=t.clientY;
+  }
+},{passive:true});
+const lookEnd=()=>{ lookId=null; };
+renderer.domElement.addEventListener('touchend',lookEnd);
+renderer.domElement.addEventListener('touchcancel',lookEnd);
+
+function walking(){ return mode==='walk' && (pl.isLocked || (TOUCH && startEl.style.display==='none')); }
+
+startEl.addEventListener('click',()=>{
+  if(mode!=='walk') return;
+  if(TOUCH){ startEl.style.display='none'; crossEl.style.display='block'; stickEl.style.display='block'; }
+  else pl.lock();
+});
 pl.addEventListener('lock',()=>{startEl.style.display='none';crossEl.style.display='block'});
-pl.addEventListener('unlock',()=>{ if(mode==='walk'){startEl.style.display='flex';crossEl.style.display='none'} });
+pl.addEventListener('unlock',()=>{ if(mode==='walk'&&!TOUCH){startEl.style.display='flex';crossEl.style.display='none'} });
+
+if(TOUCH){
+  document.getElementById('hint').innerHTML =
+    '<span class="k">單指拖</span>轉頭／旋轉<br>'+
+    '<span class="k">兩指</span>縮放遠近<br>'+
+    '<span class="k">左下搖桿</span>走動<br>'+
+    '<span class="k">右上角</span>切換視角';
+  document.querySelector('#start .box').innerHTML =
+    '<h2>🏠 準備進入你家</h2>'+
+    '<p>手指<b>拖曳畫面</b>＝轉頭看<br>左下角<b>搖桿</b>＝前後左右走動</p>'+
+    '<p style="color:#6b7a8d">想看整體格局，右上角有「俯瞰全屋」<br>（可以用兩指縮放、單指旋轉）</p>'+
+    '<div class="go">點擊進入</div>';
+}
 
 // 起始位置：客廳
 camera.position.set(7.75, EYE, 2.90);
 camera.lookAt(7.75, EYE, 6.5);
+camera.rotation.order='YXZ';
+
+// 俯瞰模式取景：直立手機要拉遠一點才框得住整棟
+function frameBird(){
+  const a = innerWidth/innerHeight;
+  const k = a>=1 ? 1 : Math.min(1.9, Math.max(1, 0.913/a));
+  camera.position.set(W/2+9*k, 15.5*k, D/2+13*k);
+  orbit.target.set(W/2, 1.2, D/2);
+  orbit.update();
+}
 
 function setMode(m){
   mode=m;
@@ -487,11 +580,12 @@ function setMode(m){
   if(walk){
     scene.fog.near=30;
     startEl.style.display='flex';
+    stickEl.style.display='none'; stickReset();
   }else{
     pl.unlock(); crossEl.style.display='none'; startEl.style.display='none';
+    stickEl.style.display='none'; stickReset();
     scene.fog.near=60;
-    camera.position.set(W/2+9, 15.5, D/2+13);
-    orbit.target.set(W/2,0,D/2); orbit.update();
+    frameBird();
   }
 }
 let roofOn=true;
@@ -513,8 +607,12 @@ document.querySelectorAll('#jump button').forEach(b=>{
     const r=R[b.dataset.go]; if(!r) return;
     if(mode!=='walk') setMode('walk');
     camera.position.set((r.x0+r.x1)/2, EYE, (r.z0+r.z1)/2);
+    if(TOUCH){ startEl.style.display='none'; crossEl.style.display='block'; stickEl.style.display='block'; }
   };
 });
+
+// 手機／平板：預設先給「俯瞰全屋」，比較好上手
+if(TOUCH) setMode('bird');
 
 /* ---------- 碰撞 ---------- */
 const RAD=0.26;
@@ -541,10 +639,11 @@ let lastRoom='';
 function tick(){
   requestAnimationFrame(tick);
   const dt=Math.min(clock.getDelta(),0.05);
-  if(mode==='walk' && pl.isLocked){
+  if(walking()){
     const sp=(keys['ShiftLeft']||keys['ShiftRight']?3.4:1.65)*dt;
-    const f=(keys['KeyW']?1:0)-(keys['KeyS']?1:0);
-    const s=(keys['KeyD']?1:0)-(keys['KeyA']?1:0);
+    let f=(keys['KeyW']?1:0)-(keys['KeyS']?1:0);
+    let s=(keys['KeyD']?1:0)-(keys['KeyA']?1:0);
+    if(TOUCH){ f=Math.max(-1,Math.min(1,f+mobF)); s=Math.max(-1,Math.min(1,s+mobS)); }
     if(f||s){
       const p=camera.position.clone();
       const dir=new THREE.Vector3(); camera.getWorldDirection(dir); dir.y=0; dir.normalize();
@@ -570,6 +669,7 @@ tick();
 addEventListener('resize',()=>{
   camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix();
   renderer.setSize(innerWidth,innerHeight);
+  if(mode!=='walk') frameBird();   // 轉橫／轉直時重新取景
 });
 window.__ready = true;
 </script>
