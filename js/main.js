@@ -11,6 +11,7 @@ import buildPublic from './furniture_public.js';
 import buildPrivate from './furniture_private.js';
 import buildLighting from './lighting.js';
 import buildPhoto from './photo.js';
+import setupAudio from './audio.js';
 
 const $ = id => document.getElementById(id);
 const QS = new URLSearchParams(location.search);
@@ -28,12 +29,19 @@ THREE.DefaultLoadingManager.onProgress = (url, done, total)=>{
 const ctx = createCore();
 const { scene, camera, renderer, EYE, TOUCH } = ctx;
 window.__a8 = { ctx, THREE };   // 給自動截圖測試用的把手（不影響使用者）
+// 給主題房（theme_*.js）用：有東西在動就 poke()，省電迴圈才會一直畫；getMode() ＝ 'walk'｜'bird'
+ctx.poke = poke;
+ctx.getMode = () => mode;
+setupAudio(ctx);   // 🔊 聲音總開關（預設關；手機規定要使用者點一下才能出聲）
 
 /* ---------- 蓋房子 → 擺家具 → 打燈 ---------- */
 stage('蓋牆、開門窗');
 await buildArch(ctx);
 stage('擺家具');
-const results = await Promise.allSettled([buildPublic(ctx), buildPrivate(ctx)]);
+// 主題房（臥室二＝賽博龐克×文藝復興音樂廳、臥室三＝陰兒房）用動態載入：某一間壞掉只少那一間，不會整個網頁打不開
+//   ⚠️ 一定要在 buildLighting 之前建好：lighting 建好時才會替場景裡的材質掛上俯瞰剖切的切平面
+const theme = f => import(f).then(m => m.default(ctx));
+const results = await Promise.allSettled([buildPublic(ctx), buildPrivate(ctx), theme('./theme_br2.js'), theme('./theme_br3.js')]);
 results.forEach((r,i)=>{ if(r.status==='rejected') console.error('furniture module '+i+' failed:', r.reason); });
 stage('打燈');
 const light = await buildLighting(ctx);
@@ -260,7 +268,7 @@ function foldHudOnce(){ if(TOUCH && !hudFoldedOnce){ hudFoldedOnce=true; if(!hud
 
 if(TOUCH){
   document.querySelector('#start .box').innerHTML =
-    '<h2>🏠 準備進入你家</h2>'+
+    '<h2>🏠 準備進入彥武天祥洗很大的家</h2>'+
     '<p>手指<b>拖曳畫面</b>＝轉頭看<br>左下角<b>搖桿</b>＝前後左右走動</p>'+
     '<p style="color:#6b7a8d">想看整體格局，右上角有「俯瞰全屋」<br>（可以用兩指縮放、單指旋轉）</p>'+
     '<div class="go">點擊進入</div>';

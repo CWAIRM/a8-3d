@@ -8,9 +8,12 @@
          兩邊都有「自動畫質」：跑不動就自己降解析度（電腦再不行就關 AO）
 
    登記格式（給家具組）：
-     ctx.lamps.push({ pos:Vector3, kind, room, color?, power? })
+     ctx.lamps.push({ pos:Vector3, kind, room, color?, power?, always?, mul? })
        kind：'pendant'｜'ceiling'｜'under'（往下打）、'floor'｜'table'｜'wall'（四面八方）
        power：亮度倍數，1 ＝ 這種燈的正常亮度（沒給就是 1；會夾在 0.3–1.6 之間）；晚上才亮（跟著時間滑桿）
+       always：0–1，白天也至少開到這個比例（主題房拉上窗簾、白天也開著燈；沒給＝0）
+       mul：每格即時亮度倍數（主題房自己改：閃爍、忽明忽暗；沒給＝1。改了要 ctx.poke() 才會重畫）
+       off：true ＝ 暫時整盞關掉、而且讓出燈池（主題房在「人看不到這間房」時設，彩色燈才不會穿牆照到隔壁；0.2 秒內生效）
      ctx.emissives.push({ mat, base, kind:'lamp'|'screen' })
        base ＝ 開燈時的 emissiveIntensity；lamp 只有晚上亮，screen 白天也微亮
 
@@ -220,7 +223,7 @@ export default async function buildLighting(ctx){
     g.a0 = Math.min(g.a0, w.at0); g.a1 = Math.max(g.a1, w.at1); g.area += w.w * (w.y1 - w.y0);
   }
   // 陽台沒有玻璃：女兒牆上方那一大片開口也算一面「窗」
-  if(R['陽台']) wgroups.set('陽台|open', { room: '陽台', normal: [0, 1], axis: 'x', a0: 0.055, a1: 3.056, c0: 9.987, c1: 10.219, y0: 1.10, y1: H, area: 3.0 * (H - 1.10) * 0.6 });
+  if(R['陽台']) wgroups.set('陽台|open', { room: '陽台', normal: [0, 1], axis: 'x', a0: 0.0, a1: 3.075, c0: 10.025, c1: 10.257, y0: 1.10, y1: H, area: 3.075 * (H - 1.10) * 0.6 });
   for(const g of wgroups.values()){
     const n = g.normal, mid = (g.a0 + g.a1) / 2, ym = (g.y0 + g.y1) / 2;
     let x, z;
@@ -297,7 +300,7 @@ export default async function buildLighting(ctx){
       adopted.add(l);
       const k = KIND[l.kind] || KIND.table, pos = lampPos(l).clone(), room = l.room || roomAt(pos.x, pos.z);
       if(!k.spot) offWall(pos, room);
-      VL.push({ type: k.spot ? 'spot' : 'point', group: 'lamp', kind: l.kind, room, pos, tgt: V3(pos.x, 0, pos.z),
+      VL.push({ type: k.spot ? 'spot' : 'point', group: 'lamp', kind: l.kind, room, pos, tgt: V3(pos.x, 0, pos.z), src: l,
                 color: C(l.color != null ? l.color : 0xffc994), angle: (k.angle || 86) * DEG, pen: 0.45, dist: k.dist, base: k.i * lampMult(l), i: 0 });
     }
   }
@@ -328,7 +331,7 @@ export default async function buildLighting(ctx){
       const held = new Set(ss.map(s => s.vl));
       const ranked = [];
       for(const v of VL){
-        if(v.type !== type || v.i <= 1e-3) continue;
+        if(v.type !== type || v.i <= 1e-3 || (v.src && v.src.off)) continue;
         let sc = v.i;
         if(walk){ const dx = v.pos.x - cx, dz = v.pos.z - cz; sc *= (v.room === camRoom ? 4 : 1) / (1 + (dx * dx + dz * dz) / 4); }
         if(held.has(v)) sc *= 1.25;   // 已經在燈池裡的稍微優先 → 分數差不多時不會來回換
@@ -354,7 +357,7 @@ export default async function buildLighting(ctx){
     for(const s of slots){
       if(s.want !== s.vl){ s.f -= dt * FADE; if(s.f <= 0){ s.f = 0; bind(s, s.want); } }
       else if(s.vl && s.f < 1) s.f = Math.min(1, s.f + dt * FADE);
-      s.light.intensity = s.vl ? s.vl.i * s.f : 0;
+      s.light.intensity = s.vl && !(s.vl.src && s.vl.src.off) ? s.vl.i * s.f * (s.vl.src && s.vl.src.mul != null ? s.vl.src.mul : 1) : 0;
     }
   }
 
@@ -810,7 +813,7 @@ export default async function buildLighting(ctx){
     tmpV.set(dir.x, 0, dir.z).normalize();
     for(const v of VL){
       if(v.group === 'win') v.i = v.base * day * (0.8 + 0.45 * Math.max(0, v.normal[0] * tmpV.x + v.normal[1] * tmpV.z)) * mode.spot;
-      else v.i = v.base * lampF * mode.lampK;
+      else v.i = v.base * Math.max(lampF, (v.src && v.src.always) || 0) * mode.lampK;
     }
     plan(false); poolTick(0); glowTick();
     // 發光材質：吸頂燈罩、家具的燈罩／燈泡（lamp）與螢幕（screen）

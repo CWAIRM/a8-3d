@@ -6,7 +6,7 @@
    手機（low）最後再按房間把同材質的零件併起來（§8），電腦版保留一件一組；
    植栽枝葉、花瓶、畫框用 Poly Haven CC0 模型（assets/public/models/，出處見 CREDITS.md）；
    地毯、電視畫面、版畫、鏡面假反射、電箱門都是 canvas 現畫的。
-   走道地上不放東西（只有 0.94 m 寬、三個房門都開在這裡），只在沒有開口的北牆掛一幅小畫。
+   走道地上不放東西（只有 0.90 m 寬、三個房門都開在這裡），只在沒有開口的北牆掛一幅小畫。
    登記：ctx.lamps（餐桌吊燈 pendant、落地燈 floor、廚房櫃下燈 under；power 是倍數）、ctx.emissives（燈球、LED、電視）、
    ctx.colliders（走不過去的家具；矮的東西 y1 也給 1.0 讓人不會穿過；多一個 pub:1 欄位給檢查腳本辨認）。
    ============================================================ */
@@ -137,7 +137,7 @@ export default async function buildPublic(ctx){
      真燈數量固定（燈池），每 0.2 秒依「人在哪間、離多近」重排 ── 登記順序不影響誰拿到燈。
      吊燈是 'pendant'（重點燈），lighting 仍會在餐廳另放一盞房間吸頂燈（它只看 'ceiling'）。 */
   const TX = 6.95, TZ = 5.55;                     // 餐桌中心
-  const LX = 7.95, LZ = 0.42, LAMP_Y = FT + 1.50;  // 客廳落地燈（東北角、電視櫃北端前）與燈球中心高
+  const LX = 5.585 + 1.026, LZ = 0.42, LAMP_Y = FT + 1.50;  // 客廳落地燈（西北角、電視櫃北端前；電視沙發對調後鏡射過來）與燈球中心高
   const PEND_Y = 1.82;                            // 餐桌吊燈燈球中心（離地 1.82，球底約 1.65）
   lamps.push({ pos: new THREE.Vector3(TX, PEND_Y - .05, TZ), kind: 'pendant', room: '餐廳', color: 0xffdcb4, power: 0.85 });   // 燈離桌面只有 1 m：比正常再收一點，桌旗與白瓷才不會白掉
   lamps.push({ pos: new THREE.Vector3(LX, LAMP_Y, LZ), kind: 'floor', room: '客廳', color: 0xffd3a4, power: 1.0 });
@@ -258,86 +258,94 @@ export default async function buildPublic(ctx){
   }
 
   /* ============================================================
-     4. 客廳（x 5.574–8.976, z 0–4.09）：L 型沙發朝東看電視牆
+     4. 客廳（x 5.585–8.95, z 0–4.04；圖：336.5 寬）：電視掛西牆（臥室二隔間）、L 型沙發靠東牆朝西看電視
+        2026-09-19 Andy：「電視跟沙發交換位置」→ 整組左右鏡射（貴妃椅仍在北端靠窗）
+        鏡射做法：沙發照原本「靠西牆」的寫法算座標，再用 mx() 翻到東牆；零件的 ry、rz 轉角變號（rx 不變）
+        ⛔ 不用 scale.x = −1：手機版會把幾何合併（§8），負縮放合併後面會翻到裡面去
      ============================================================ */
   {
+    const WW = 5.585, EW = 8.95;                  // 西牆（臥室二隔間東面）、東牆內面
+    const mx = x => WW + EW - x;                  // 「離西牆 d」→「離東牆 d」
+    const mr = r => r ? [r[0], -(r[1] || 0), -(r[2] || 0)] : r;
     // 地毯 2.35 × 3.15（沙發下到電視櫃前）
     const rug = new THREE.Mesh(new RoundedBoxGeometry(2.35, 0.012, 3.15, 2, 0.006), M.RUG);
-    rug.position.set(7.125, FT + 0.006, 1.825); rug.receiveShadow = true; rug.name = 'rug'; rug.userData.pub = 'rug'; scene.add(rug);
+    rug.position.set(mx(WW + 1.551), FT + 0.006, 1.825); rug.receiveShadow = true; rug.name = 'rug'; rug.userData.pub = 'rug'; scene.add(rug);
     M.RUG.normalMap && M.RUG.normalMap.repeat.set(2.35 / .55, 3.15 / .55);
 
-    // ---- L 型沙發：主體靠西（臥室二隔間牆），北端往東延伸成貴妃椅 ----
+    // ---- L 型沙發：主體靠東牆，北端往西延伸成貴妃椅 ----
     const s = item('sofa');
-    const X0 = 5.634, X1 = 6.554, Z0 = 0.32, Z1 = 2.80, CX = 7.03, CZ = 1.22;  // 主體 / 貴妃椅範圍
+    const sb = (w, h, d, r, m, px, py, pz, o = {}) => s.rbox(w, h, d, r, m, mx(px), py, pz, { ...o, rot: mr(o.rot) });
+    const X0 = WW + 0.06, X1 = X0 + 0.92, Z0 = 0.32, Z1 = 2.80, CX = WW + 1.456, CZ = 1.22;  // 主體 / 貴妃椅範圍（鏡射前）
     const yB0 = FT + 0.08, yB1 = FT + 0.28;                                    // 底座下緣、上緣（坐墊放在上面 → 坐面約 0.47 m、背墊頂約 0.90 m，一般沙發的高度）
     // 橡木短腳
     for(const [px, pz] of [[X0 + .07, Z0 + .07], [X0 + .07, Z1 - .07], [X1 - .07, Z1 - .07], [X1 - .07, (Z0 + Z1) / 2], [CX - .07, Z0 + .07], [CX - .07, CZ - .07], [X0 + .07, (Z0 + Z1) / 2]])
-      s.cyl(.022, .018, yB0 - FT, M.OAKL, px, FT + (yB0 - FT) / 2, pz, { seg: 12 });
+      s.cyl(.022, .018, yB0 - FT, M.OAKL, mx(px), FT + (yB0 - FT) / 2, pz, { seg: 12 });
     // 底座
-    s.rbox(X1 - X0, yB1 - yB0, Z1 - Z0, .03, M.FABB, (X0 + X1) / 2, (yB0 + yB1) / 2, (Z0 + Z1) / 2);
-    s.rbox(CX - X1 + .05, yB1 - yB0, CZ - Z0, .03, M.FABB, (X1 - .05 + CX) / 2, (yB0 + yB1) / 2, (Z0 + CZ) / 2);
-    // 硬背框（西側整條 + 北側貴妃椅端）＋ 南側矮扶手；背墊另外做（目標圖的沙發是一塊塊鼓鼓的背墊）
+    sb(X1 - X0, yB1 - yB0, Z1 - Z0, .03, M.FABB, (X0 + X1) / 2, (yB0 + yB1) / 2, (Z0 + Z1) / 2);
+    sb(CX - X1 + .05, yB1 - yB0, CZ - Z0, .03, M.FABB, (X1 - .05 + CX) / 2, (yB0 + yB1) / 2, (Z0 + CZ) / 2);
+    // 硬背框（東側整條 + 北側貴妃椅端）＋ 南側矮扶手；背墊另外做（目標圖的沙發是一塊塊鼓鼓的背墊）
     const FB = .11;
-    s.rbox(FB, .46, Z1 - Z0, .03, M.FABB, X0 + FB / 2, yB1 + .23 - .02, (Z0 + Z1) / 2, { seg: 3 });
-    s.rbox(CX - X0 - FB, .42, FB, .03, M.FABB, (X0 + FB + CX) / 2, yB1 + .21 - .02, Z0 + FB / 2, { seg: 3 });
-    s.rbox(X1 - X0, .27, .18, .05, M.FAB, (X0 + X1) / 2, yB1 + .135 - .02, Z1 - .09, { seg: 3 });
+    sb(FB, .46, Z1 - Z0, .03, M.FABB, X0 + FB / 2, yB1 + .23 - .02, (Z0 + Z1) / 2, { seg: 3 });
+    sb(CX - X0 - FB, .42, FB, .03, M.FABB, (X0 + FB + CX) / 2, yB1 + .21 - .02, Z0 + FB / 2, { seg: 3 });
+    sb(X1 - X0, .27, .18, .05, M.FAB, (X0 + X1) / 2, yB1 + .135 - .02, Z1 - .09, { seg: 3 });
     // 坐墊：貴妃椅一大塊 + 兩塊；ST = 坐墊上緣
-    const cushion = (x0, x1, z0, z1) => s.rbox(x1 - x0 - .015, .15, z1 - z0 - .015, .055, M.FAB, (x0 + x1) / 2, yB1 + .075 - .005, (z0 + z1) / 2, { seg: 3 });
+    const cushion = (x0, x1, z0, z1) => sb(x1 - x0 - .015, .15, z1 - z0 - .015, .055, M.FAB, (x0 + x1) / 2, yB1 + .075 - .005, (z0 + z1) / 2, { seg: 3 });
     const ST = yB1 + .145, zm = CZ + (Z1 - .18 - CZ) / 2;
     cushion(X0 + FB, CX, Z0 + FB, CZ);
     cushion(X0 + FB, X1, CZ, zm);
     cushion(X0 + FB, X1, zm, Z1 - .18);
-    // 背墊：厚 0.17、高 0.44、往後仰 8°，坐在坐墊上——西側三塊、北側兩塊
+    // 背墊：厚 0.17、高 0.44、往後仰 8°，坐在坐墊上——東側三塊、北側兩塊
     const BT = .17, BH = .44, TILT = .14, by = ST - .02 + BH / 2;
     const zs0 = Z0 + FB, zs1 = Z1 - .18, seg = (zs1 - zs0) / 3;
-    for(let i = 0; i < 3; i++) s.rbox(BT, BH, seg - .012, .06, M.FAB, X0 + FB + BT / 2 - .012, by, zs0 + seg * (i + .5), { seg: 3, rot: [0, 0, TILT] });
+    for(let i = 0; i < 3; i++) sb(BT, BH, seg - .012, .06, M.FAB, X0 + FB + BT / 2 - .012, by, zs0 + seg * (i + .5), { seg: 3, rot: [0, 0, TILT] });
     const xs0 = X0 + FB + BT, xs1 = CX, segx = (xs1 - xs0) / 2;
-    for(let i = 0; i < 2; i++) s.rbox(segx - .012, BH, BT, .06, M.FAB, xs0 + segx * (i + .5), by, Z0 + FB + BT / 2 - .012, { seg: 3, rot: [-TILT, 0, 0] });
+    for(let i = 0; i < 2; i++) sb(segx - .012, BH, BT, .06, M.FAB, xs0 + segx * (i + .5), by, Z0 + FB + BT / 2 - .012, { seg: 3, rot: [-TILT, 0, 0] });
     // 抱枕（米白 ×2、灰褐 ×1）靠在背墊前 ＋ 折好的灰褐毯放在南端坐墊上
-    const PF = X0 + FB + BT;                    // 背墊前緣（西側）
-    s.rbox(.46, .46, .13, .06, M.FAB, PF + .30, ST + .21, Z0 + FB + BT + .10, { seg: 3, rot: [-.22, .30, 0] });
-    s.rbox(.44, .44, .12, .06, M.TAUPE, PF + .09, ST + .20, zs0 + seg * 1.5, { seg: 3, rot: [.12, 1.45, 0] });
-    s.rbox(.46, .46, .13, .06, M.FAB, PF + .09, ST + .21, Z1 - .52, { seg: 3, rot: [.1, 1.62, 0] });
-    s.rbox(.40, .035, .34, .012, M.TAUPE, PF + .26, ST + .0175, Z1 - .45, { rot: [0, .12, 0] });
-    s.rbox(.34, .03, .28, .012, M.TAUPE, PF + .28, ST + .05, Z1 - .47, { rot: [0, -.1, 0] });
+    const PF = X0 + FB + BT;                    // 背墊前緣
+    sb(.46, .46, .13, .06, M.FAB, PF + .30, ST + .21, Z0 + FB + BT + .10, { seg: 3, rot: [-.22, .30, 0] });
+    sb(.44, .44, .12, .06, M.TAUPE, PF + .09, ST + .20, zs0 + seg * 1.5, { seg: 3, rot: [.12, 1.45, 0] });
+    sb(.46, .46, .13, .06, M.FAB, PF + .09, ST + .21, Z1 - .52, { seg: 3, rot: [.1, 1.62, 0] });
+    sb(.40, .035, .34, .012, M.TAUPE, PF + .26, ST + .0175, Z1 - .45, { rot: [0, .12, 0] });
+    sb(.34, .03, .28, .012, M.TAUPE, PF + .28, ST + .05, Z1 - .47, { rot: [0, -.1, 0] });
     s.done();
-    collide(X0, Z0, X1, Z1, 1.0); collide(X1, Z0, CX, CZ, 1.0);
+    collide(mx(X1), Z0, mx(X0), Z1, 1.0); collide(mx(CX), Z0, mx(X1), CZ, 1.0);
 
-    // ---- 圓形橡木茶几 ⌀0.80（離沙發坐墊前緣 0.35、離電視櫃 0.86 → 走道 ≥ 0.8）----
-    const CTX = 7.30, CTZ = 2.05;
+    // ---- 圓形橡木茶几 ⌀0.80（離沙發坐墊前緣 0.35、離電視櫃 0.82 → 走道 ≥ 0.8）----
+    const CTX = mx(WW + 1.726), CTZ = 2.05;
     const t = item('coffee_table', { x: CTX, z: CTZ });
     t.cyl(.40, .40, .035, M.OAK, 0, FT + .40 + .0175, 0, { seg: 48 });
     t.cyl(.36, .36, .012, M.OAKL, 0, FT + .39, 0, { seg: 48 });                // 桌面下的托板
     for(let i = 0; i < 3; i++){ const a = Math.PI / 2 + i * Math.PI * 2 / 3; t.cyl(.020, .015, .40, M.OAKL, Math.cos(a) * .29, FT + .20, Math.sin(a) * .29, { seg: 12, rot: [0, -a, .13] }); }
-    t.rbox(.32, .014, .22, .006, M.OAKL, .07, FT + .442, .10, { rot: [0, .3, 0] });    // 淺橡木托盤 + 兩個白瓷杯（目標圖茶几上是淺色小物，不要黑塊）
-    t.cyl(.038, .032, .07, M.CER, .03, FT + .484, .08, { seg: 16 }); t.cyl(.038, .032, .07, M.CER, .13, FT + .484, .13, { seg: 16 });
-    t.rbox(.22, .018, .16, .003, M.WHT, -.02, FT + .444, -.20, { rot: [0, -.25, 0] });   // 兩本疊著的書（米白＋灰褐）
-    t.rbox(.20, .016, .15, .003, M.TAUPE, -.02, FT + .461, -.20, { rot: [0, -.1, 0] });
+    t.rbox(.32, .014, .22, .006, M.OAKL, -.07, FT + .442, .10, { rot: [0, -.3, 0] });  // 淺橡木托盤 + 兩個白瓷杯（目標圖茶几上是淺色小物，不要黑塊）
+    t.cyl(.038, .032, .07, M.CER, -.03, FT + .484, .08, { seg: 16 }); t.cyl(.038, .032, .07, M.CER, -.13, FT + .484, .13, { seg: 16 });
+    t.rbox(.22, .018, .16, .003, M.WHT, .02, FT + .444, -.20, { rot: [0, .25, 0] });   // 兩本疊著的書（米白＋灰褐）
+    t.rbox(.20, .016, .15, .003, M.TAUPE, .02, FT + .461, -.20, { rot: [0, .1, 0] });
     t.done();
     collide(CTX - .40, CTZ - .40, CTX + .40, CTZ + .40, 1.0);
 
-    // ---- 電視櫃（東牆）2.6 m 淺橡木、直條格柵門 ----
-    const cz0 = 0.30, cz1 = 2.90, cx0 = 8.556, cx1 = 8.958;
+    // ---- 電視櫃（西牆）2.6 m 淺橡木、直條格柵門（門片朝東）----
+    const cz0 = 0.30, cz1 = 2.90, cx0 = WW + .018, cx1 = WW + .42;
     const c = item('tv_console');
-    c.box(cx1 - cx0 - .06, .05, cz1 - cz0 - .10, M.DARKW, (cx0 + cx1) / 2 + .03, FT + .025, (cz0 + cz1) / 2);   // 內縮踢腳
+    c.box(cx1 - cx0 - .06, .05, cz1 - cz0 - .10, M.DARKW, (cx0 + cx1) / 2 - .03, FT + .025, (cz0 + cz1) / 2);   // 內縮踢腳
     c.rbox(cx1 - cx0, .36, cz1 - cz0, .008, M.OAK, (cx0 + cx1) / 2, FT + .05 + .18, (cz0 + cz1) / 2);
     c.rbox(cx1 - cx0 + .02, .028, cz1 - cz0 + .02, .006, M.OAK, (cx0 + cx1) / 2, FT + .41 + .014, (cz0 + cz1) / 2);   // 頂板
-    for(let zz = cz0 + .035; zz < cz1 - .03; zz += .062) c.box(.012, .30, .028, M.OAKL, cx0 - .006, FT + .05 + .18, zz);  // 格柵
-    c.box(.014, .30, .006, M.DARKW, cx0 - .002, FT + .05 + .18, (cz0 + cz1) / 2);  // 中間門縫
+    for(let zz = cz0 + .035; zz < cz1 - .03; zz += .062) c.box(.012, .30, .028, M.OAKL, cx1 + .006, FT + .05 + .18, zz);  // 格柵
+    c.box(.014, .30, .006, M.DARKW, cx1 + .002, FT + .05 + .18, (cz0 + cz1) / 2);  // 中間門縫
     // 頂上的書 + 小音響
-    c.rbox(.16, .022, .22, .004, M.WHT, 8.75, FT + .44 + .011, 2.45); c.rbox(.15, .02, .21, .004, M.TAUPE, 8.75, FT + .462 + .01, 2.44, { rot: [0, .08, 0] }); c.rbox(.14, .018, .20, .004, M.OLIVE, 8.75, FT + .482 + .009, 2.46);
-    c.rbox(.12, .16, .12, .01, M.TAUPE, 8.76, FT + .44 + .08, 0.62, { seg: 2 });
+    const tx = WW + .226;
+    c.rbox(.16, .022, .22, .004, M.WHT, tx, FT + .44 + .011, 2.45); c.rbox(.15, .02, .21, .004, M.TAUPE, tx, FT + .462 + .01, 2.44, { rot: [0, -.08, 0] }); c.rbox(.14, .018, .20, .004, M.OLIVE, tx, FT + .482 + .009, 2.46);
+    c.rbox(.12, .16, .12, .01, M.TAUPE, WW + .216, FT + .44 + .08, 0.62, { seg: 2 });
     c.done();
     collide(cx0, cz0, cx1, cz1, 1.0);
-    // 壁掛電視 65"（1.45 × 0.83），畫面朝西；壁掛架背面貼東牆面（EW = 8.976；踢腳板只到 0.125 m 高，這個高度沒有）
-    const EW = 8.976, tvz = 1.55, tvy = FT + 1.20;
+    // 壁掛電視 65"（1.45 × 0.83），畫面朝東；壁掛架背面貼西牆面（WW＝臥室二隔間東面；踢腳板只到 0.125 m 高，這個高度沒有）
+    const tvz = 1.55, tvy = FT + 1.20;
     const tv = item('tv');
-    tv.box(.02, .30, .25, M.BLK, EW - .01, tvy, tvz);                           // 壁掛架 x 8.956–8.976
-    tv.rbox(.035, .83, 1.45, .006, M.BLK, EW - .02 - .0175, tvy, tvz);          // 機身 x 8.921–8.956
-    tv.box(.004, .80, 1.42, M.TV, EW - .055 - .001, tvy, tvz, { uv: false });   // 畫面
+    tv.box(.02, .30, .25, M.BLK, WW + .01, tvy, tvz);                           // 壁掛架
+    tv.rbox(.035, .83, 1.45, .006, M.BLK, WW + .02 + .0175, tvy, tvz);          // 機身
+    tv.box(.004, .80, 1.42, M.TV, WW + .055 + .001, tvy, tvz, { uv: false });   // 畫面
     tv.done();
 
-    // ---- 落地燈（東北角、電視櫃北端前）：目標圖是黃銅細桿頂著一顆乳白玻璃球（燈已在最前面登記）----
+    // ---- 落地燈（西北角、電視櫃北端前）：目標圖是黃銅細桿頂著一顆乳白玻璃球（燈已在最前面登記）----
     const l = item('floor_lamp', { x: LX, z: LZ });
     const stemTop = LAMP_Y - .15;
     l.cyl(.13, .14, .02, M.BLK, 0, FT + .01, 0, { seg: 32 });                                   // 霧黑圓底座
@@ -347,9 +355,9 @@ export default async function buildPublic(ctx){
     l.done();
     collide(LX - .14, LZ - .14, LX + .14, LZ + .14, 1.5);
 
-    // ---- 電視櫃南端：矮的橡木方几當花架 + 大盆栽（目標圖是一個比電視櫃再矮一點的橡木方塊，上面一盆白盆植栽）----
+    // ---- 沙發南端（東牆邊）：矮的橡木方几當花架 + 大盆栽（目標圖是一個比沙發扶手再矮一點的橡木方塊，上面一盆白盆植栽）----
     //      用同一種淺橡木做（Poly Haven 的 side_table_01 木色偏紅棕，跟整組橡木對不起來，不用）
-    const SX = 8.70, SZ = 3.24, SW = .44, SD = .44, SHT = .38;
+    const SX = EW - .276, SZ = 3.24, SW = .44, SD = .44, SHT = .38;
     const st = item('plant_stand', { x: SX, z: SZ });
     for(const [px, pz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) st.box(.035, SHT - .03, .035, M.OAKL, px * (SW / 2 - .03), FT + (SHT - .03) / 2, pz * (SD / 2 - .03));
     st.rbox(SW, .03, SD, .006, M.OAK, 0, FT + SHT - .015, 0);                     // 頂板
@@ -360,12 +368,12 @@ export default async function buildPublic(ctx){
     await plant(SX, SZ, FT + SHT, .82, 0.6);
     collide(SX - SW / 2, SZ - SD / 2, SX + SW / 2, SZ + SD / 2, 1.3);
     // 茶几上的小盆栽、電視櫃上的白瓷瓶
-    await plant(CTX - .18, CTZ + .02, FT + .435, .30, 2.1, { small: true });   // 托盤在東南、書在北、盆栽在西 → 三樣不互相壓到
-    await vase(8.75, 1.05, FT + .44, .30);
+    await plant(CTX + .18, CTZ + .02, FT + .435, .30, 2.1, { small: true });   // 托盤在西南、書在北、盆栽在東 → 三樣不互相壓到
+    await vase(tx, 1.05, FT + .44, .30);
   }
 
   /* ============================================================
-     5. 餐廳（x 4.85–8.976, z 4.09–8.26）＋玄關（東牆大門 z 7.056–8.124）
+     5. 餐廳（x 4.85–8.95, z 4.04–8.20）＋玄關（東牆大門 z 6.996–8.064）
      ============================================================ */
   {
     const TW = 1.50, TD = 0.85, TH = FT + 0.74;           // TX / TZ 在最前面（登記吊燈時）就定好了
@@ -439,9 +447,9 @@ export default async function buildPublic(ctx){
     p.geo(new THREE.SphereGeometry(.17, LOW ? 20 : 32, LOW ? 12 : 20), M.GLOBE, 0, PEND_Y, 0);
     p.done();
 
-    // ---- 玄關：東牆 DD 電箱（規格書 z 6.168–6.784；圖上是符號、深度不照比例）→ 嵌壁式：箱體在牆裡，
-    //      牆面只看到一圈 1.2 cm 的白框＋平的門片（總共凸出牆面約 1.8 cm），背面貼牆面 x 8.976 ----
-    const EW = 8.976, DY = FT + 1.60, DZ = 6.476;
+    // ---- 玄關：東牆 DD 電箱（規格書 z 6.108–6.724，跟大門的距離不變；圖上是符號、深度不照比例）→ 嵌壁式：箱體在牆裡，
+    //      牆面只看到一圈 1.2 cm 的白框＋平的門片（總共凸出牆面約 1.8 cm），背面貼牆面 x 8.95 ----
+    const EW = 8.95, DY = FT + 1.60, DZ = 6.416;
     const dd = item('dd_panel');
     dd.rbox(.012, .50, .616, .003, M.WHT, EW - .006, DY, DZ);                       // 外框（嵌壁箱的收邊框）
     dd.box(.006, .44, .556, M.DD, EW - .012 - .003, DY, DZ, { uv: false });          // 平門片（畫著門縫與 DD 字樣）
@@ -449,46 +457,47 @@ export default async function buildPublic(ctx){
     dd.done();
 
     // ---- 玄關櫃：東牆、電箱北側的一道細長矮橡木櫃（目標圖這面牆就是一條長矮櫃）1.55 × 0.34 × 0.95 ----
-    //      北端 z 4.55、南端 z 6.10（離電箱 6.8 cm、離大門開門弧線 1 m 以上）；櫃面到餐椅 ≥ 1.0 m
+    //      北端 z 4.49、南端 z 6.04（離電箱 6.8 cm、離大門開門弧線 1 m 以上）；櫃面到餐椅 ≥ 1.0 m
     const sc = item('entry_cabinet');
-    const sx0 = 8.62, sx1 = 8.958, sz0 = 4.55, sz1 = 6.10, sH = .95, nD = 4, dw = (sz1 - sz0) / nD;
+    const sx0 = EW - .356, sx1 = EW - .018, sz0 = 4.49, sz1 = 6.04, sH = .95, nD = 4, dw = (sz1 - sz0) / nD;
     for(const [px, pz] of [[sx0 + .05, sz0 + .05], [sx0 + .05, sz1 - .05], [sx1 - .05, sz0 + .05], [sx1 - .05, sz1 - .05]]) sc.cyl(.013, .011, .10, M.BLK, px, FT + .05, pz, { seg: 10 });
     sc.rbox(sx1 - sx0, sH - .10 - .025, sz1 - sz0, .006, M.OAK, (sx0 + sx1) / 2, FT + .10 + (sH - .125) / 2, (sz0 + sz1) / 2);
     for(let i = 1; i < nD; i++) sc.box(.006, sH - .16, .004, M.DARKW, sx0 - .002, FT + .10 + (sH - .125) / 2, sz0 + dw * i);     // 門片縫
     for(let i = 0; i < nD; i++) sc.box(.006, .012, dw - .07, M.DARKW, sx0 - .002, FT + sH - .06, sz0 + dw * (i + .5));             // 上緣拉手溝
     sc.rbox(sx1 - sx0 + .02, .025, sz1 - sz0 + .02, .005, M.OAK, (sx0 + sx1) / 2, FT + sH - .0125, (sz0 + sz1) / 2);         // 頂板
     const TOPY = FT + sH;
-    sc.cyl(.075, .06, .025, M.CER, (sx0 + sx1) / 2, TOPY + .0125, 5.62, { seg: 24 });                                          // 白瓷鑰匙碟
-    sc.rbox(.17, .022, .23, .004, M.WHT, (sx0 + sx1) / 2 + .02, TOPY + .011, 5.95, { rot: [0, .06, 0] });                     // 兩本書
-    sc.rbox(.16, .02, .22, .004, M.TAUPE, (sx0 + sx1) / 2 + .02, TOPY + .032, 5.95, { rot: [0, -.05, 0] });
+    sc.cyl(.075, .06, .025, M.CER, (sx0 + sx1) / 2, TOPY + .0125, 5.56, { seg: 24 });                                          // 白瓷鑰匙碟
+    sc.rbox(.17, .022, .23, .004, M.WHT, (sx0 + sx1) / 2 + .02, TOPY + .011, 5.89, { rot: [0, .06, 0] });                     // 兩本書
+    sc.rbox(.16, .02, .22, .004, M.TAUPE, (sx0 + sx1) / 2 + .02, TOPY + .032, 5.89, { rot: [0, -.05, 0] });
     sc.done();
     collide(sx0, sz0, sx1, sz1, 1.1);
-    await vase((sx0 + sx1) / 2, 4.78, TOPY, .30);
+    await vase((sx0 + sx1) / 2, 4.72, TOPY, .30);
     // 櫃子上方一面圓鏡 ⌀0.55（橡木細框），鏡心離地 1.62 m；目標圖這面牆上有一個圓形的東西
-    const mr = item('entry_mirror', { x: EW - .012, z: 5.45 });   // 背板 x 8.964–8.976 貼牆面
+    const mr = item('entry_mirror', { x: EW - .012, z: 5.39 });   // 背板 x 8.938–8.95 貼牆面
     mr.cyl(.275, .275, .012, M.DARKW, .006, FT + 1.62, 0, { seg: 48, rot: [0, 0, Math.PI / 2] });
     mr.geo(new THREE.CircleGeometry(.262, 48), M.MIRROR, -.009, FT + 1.62, 0, [0, -Math.PI / 2, 0]);   // 鏡面朝西（UV 0–1 才貼得到整張假反射）
     mr.torus(.268, .011, M.OAK, -.006, FT + 1.62, 0, { rot: [0, Math.PI / 2, 0], ts: 48, rs: 10 });
     mr.done();
     // 客廳與餐廳交界、東牆邊一盆高的橄欖綠植栽（電視櫃南端花架與玄關櫃之間）
-    await plant(8.57, 4.08, FT, 1.15, 2.4);          // 枝葉寬約 0.74 m：中心退到 8.57，葉尖才不會插進東牆（8.976）
-    collide(8.36, 3.87, 8.78, 4.29, 1.0);
+    await plant(8.544, 4.08, FT, 1.15, 2.4);         // 枝葉寬約 0.74 m：中心退到離牆 0.41，葉尖才不會插進東牆（8.95）
+    collide(8.334, 3.87, 8.754, 4.29, 1.0);
     // 餐廳西側 L 牆上一幅簡約掛畫（Poly Haven 模型），面向餐桌
     await framedPrint(artMap, 4.85 + .012 + .01, 5.55, FT + 1.05, Math.PI / 2, .84);
   }
 
   /* ============================================================
-     5b. 走道（x 2.841–5.574, z 3.149–4.09）：只有 0.94 m 寬、三個房門都開在這裡 → 地上什麼都不放，
-         只在北牆（臥室二南牆、x 2.964–4.497 那段沒有開口的牆）掛一幅小版畫，讓走進去時不是一面白牆
+     5b. 走道（x 2.865–5.585, z 3.14–4.04）：只有 0.90 m 寬（圖：90）、三個房門都開在這裡 → 地上什麼都不放，
+         只在北牆（臥室二南牆、x 2.985–4.565 那段沒有開口的牆）掛一幅小版畫，讓走進去時不是一面白牆
      ============================================================ */
-  await framedPrint(artMap2, 3.73, 3.149 + .02, FT + 1.12, 0, .62);
+  await framedPrint(artMap2, 3.775, 3.14 + .02, FT + 1.12, 0, .62);
 
   /* ============================================================
-     6. 廚房（x 3.219–5.982, z 8.424–10.376）：南牆流理台（西爐東槽）、北牆矮櫃＋冰箱
+     6. 廚房（x 3.225–6.015, z 8.32–10.35；圖：279 寬）：南牆流理台（西爐東槽）、北牆矮櫃＋冰箱
+        v5：櫃體跟著最近那道牆移動（西段 +0.6 cm、水槽段 +3.3 cm、南牆 −2.6 cm），尺寸不變
      ============================================================ */
   {
-    const KX0 = 3.219 + .003, KX1 = 5.982 - .003, KZ1 = 10.376 - .003;   // 牆內面往內 3 mm：櫃子背板／側板不跟牆面同一個平面（俯瞰剖切時才不會一條一條閃）
-    const CX0 = 3.313, CX1 = 5.856, CZ0 = 9.90;          // 規格書的流理台框（南牆）
+    const KX0 = 3.225 + .003, KX1 = 6.015 - .003, KZ1 = 10.35 - .003;   // 牆內面往內 3 mm：櫃子背板／側板不跟牆面同一個平面（俯瞰剖切時才不會一條一條閃）
+    const CX0 = 3.319, CX1 = 5.889, CZ0 = 9.874;         // 規格書的流理台框（南牆）
     const CH = 0.86, TOP = FT + CH, TT = 0.04;            // 櫃高、檯面厚
     const UY0 = FT + 1.50, UY1 = FT + 2.25, UZ0 = KZ1 - .35;   // 吊櫃：底、頂、前緣（深 0.35）
     const k = item('kitchen_base');
@@ -498,7 +507,7 @@ export default async function buildPublic(ctx){
     k.box(CX0 - KX0, CH, KZ1 - CZ0, M.OAK, (KX0 + CX0) / 2, FT + CH / 2, (CZ0 + KZ1) / 2);
     k.box(KX1 - CX1, CH, KZ1 - CZ0, M.OAK, (CX1 + KX1) / 2, FT + CH / 2, (CZ0 + KZ1) / 2);
     // 門片／抽屜面板（3 mm 縫、上緣黑色拉手溝）：爐下兩抽、中間兩門、水槽下兩門
-    const fronts = [[CX0, 4.00, 'drawer'], [4.00, 4.49, 'door'], [4.49, 4.98, 'door'], [4.98, 5.418, 'door'], [5.418, CX1, 'door']];
+    const fronts = [[CX0, 4.006, 'drawer'], [4.006, 4.496, 'door'], [4.496, 4.986, 'door'], [4.986, 5.451, 'door'], [5.451, CX1, 'door']];
     for(const [a, b, kind] of fronts){
       if(kind === 'drawer'){
         k.rbox(b - a - .004, .38 - .004, .018, .002, M.OAK, (a + b) / 2, FT + .10 + .19, CZ0 + .009);
@@ -507,8 +516,8 @@ export default async function buildPublic(ctx){
       }else k.rbox(b - a - .004, CH - .10 - .004, .018, .002, M.OAK, (a + b) / 2, FT + .10 + (CH - .10) / 2, CZ0 + .009);
       k.box(b - a - .06, .012, .004, M.BLK, (a + b) / 2, FT + CH - .014, CZ0 + .001);
     }
-    // 石英石檯面（牆到牆，前緣出 1.5 cm），水槽處留洞：規格 sink x 5.038–5.803, z 9.909–10.321
-    const SX0 = 5.06, SX1 = 5.78, SZ0 = 9.935, SZ1 = 10.30, TZ0 = CZ0 - .015;
+    // 石英石檯面（牆到牆，前緣出 1.5 cm），水槽處留洞：規格 sink x 5.071–5.836, z 9.883–10.295
+    const SX0 = 5.093, SX1 = 5.813, SZ0 = 9.909, SZ1 = 10.274, TZ0 = CZ0 - .015;
     k.box(SX0 - KX0, TT, KZ1 - TZ0, M.QTZ, (KX0 + SX0) / 2, TOP + TT / 2, (TZ0 + KZ1) / 2);
     k.box(KX1 - SX1, TT, KZ1 - TZ0, M.QTZ, (SX1 + KX1) / 2, TOP + TT / 2, (TZ0 + KZ1) / 2);
     k.box(SX1 - SX0, TT, SZ0 - TZ0, M.QTZ, (SX0 + SX1) / 2, TOP + TT / 2, (TZ0 + SZ0) / 2);
@@ -531,44 +540,44 @@ export default async function buildPublic(ctx){
     k.cyl(.011, .011, .06, M.STL, fx, TOP + TT + .19, fz - .17, { seg: 12 });
     k.cyl(.01, .01, .025, M.STL, fx + .022, TOP + TT + .08, fz, { seg: 12, rot: [0, 0, Math.PI / 2] });   // 撥桿的轂（接在龍頭側面）
     k.box(.01, .01, .065, M.STL, fx + .032, TOP + TT + .08, fz - .02);                                   // 撥桿（往前）
-    // 黑玻璃四口爐（規格 hob x 3.379–3.975、z 9.914–10.308 → 0.59 × 0.40，完全落在檯面內）
-    const HX = 3.677, HZ = 10.111;
+    // 黑玻璃四口爐（規格 hob x 3.385–3.981、z 9.888–10.282 → 0.59 × 0.40，完全落在檯面內）
+    const HX = 3.683, HZ = 10.085;
     k.rbox(.59, .008, .40, .003, M.GLB, HX, TOP + TT + .004, HZ);
     for(const [ox, oz] of [[-.14, -.095], [.14, -.095], [-.14, .10], [.14, .10]]){
       k.torus(.062, .006, M.BLK, HX + ox, TOP + TT + .009, HZ + oz, { rot: [Math.PI / 2, 0, 0], rs: 6, ts: 28 });
       k.cyl(.035, .035, .006, M.BLK, HX + ox, TOP + TT + .011, HZ + oz, { seg: 20 });
     }
     // 檯面後方的防濺背板：跟檯面同一塊淺暖灰石英石（無印式的簡單一片），從檯面到吊櫃底
-    //   窗（x 4.984–5.812、窗台 1.30）前面有 arch 的石材窗台板（兩端各多 2 cm、y 1.28–1.31）→ 背板在窗台板下緣收邊、兩端繞開
-    const BY = TOP + TT, WX0 = 4.984, WX1 = 5.812, SL0 = 1.28, SL1 = 1.31;
+    //   窗（x 5.017–5.845、窗台 1.30）前面有 arch 的石材窗台板（兩端各多 2 cm、y 1.28–1.31）→ 背板在窗台板下緣收邊、兩端繞開
+    const BY = TOP + TT, WX0 = 5.017, WX1 = 5.845, SL0 = 1.28, SL1 = 1.31;
     k.box(WX0 - .02 - KX0, UY0 - BY, .012, M.QTZ, (KX0 + WX0 - .02) / 2, (BY + UY0) / 2, KZ1 - .006);
     k.box(WX1 - WX0 + .04, SL0 - BY, .012, M.QTZ, (WX0 + WX1) / 2, (BY + SL0) / 2, KZ1 - .006);
     k.box(KX1 - WX1 - .02, UY0 - BY, .012, M.QTZ, (WX1 + .02 + KX1) / 2, (BY + UY0) / 2, KZ1 - .006);
     for(const xm of [WX0 - .01, WX1 + .01]) k.box(.02, UY0 - SL1, .012, M.QTZ, xm, (SL1 + UY0) / 2, KZ1 - .006);   // 窗台板兩端上方
-    // 吊櫃（白色）x 3.219–4.90，y 1.50–2.25，深 0.35；爐上是抽油煙機（不鏽鋼罩 + 上方櫃）
-    k.box(3.377 - KX0, UY1 - UY0, .35, M.WHT, (KX0 + 3.377) / 2, (UY0 + UY1) / 2, (UZ0 + KZ1) / 2);
-    k.box(4.90 - 3.977, UY1 - UY0, .33, M.WHT, (3.977 + 4.90) / 2, (UY0 + UY1) / 2, (UZ0 + .02 + KZ1) / 2);
-    for(const [a, b] of [[3.977, 4.44], [4.44, 4.90]]) k.rbox(b - a - .004, UY1 - UY0 - .004, .018, .002, M.WHT, (a + b) / 2, (UY0 + UY1) / 2, UZ0 + .009);
-    k.box(.60, UY1 - (UY0 + .20), .35, M.WHT, 3.677, (UY0 + .20 + UY1) / 2, (UZ0 + KZ1) / 2);           // 煙機上櫃
-    k.rbox(.60, .10, .40, .006, M.STL, 3.677, UY0 + .05, KZ1 - .20);                                       // 煙機罩
-    k.box(.56, .012, .30, M.BLK, 3.677, UY0 + .003, KZ1 - .18, { uv: false });                             // 罩底黑濾網
+    // 吊櫃（白色）x 3.225–4.906，y 1.50–2.25，深 0.35；爐上是抽油煙機（不鏽鋼罩 + 上方櫃）
+    k.box(3.383 - KX0, UY1 - UY0, .35, M.WHT, (KX0 + 3.383) / 2, (UY0 + UY1) / 2, (UZ0 + KZ1) / 2);
+    k.box(4.906 - 3.983, UY1 - UY0, .33, M.WHT, (3.983 + 4.906) / 2, (UY0 + UY1) / 2, (UZ0 + .02 + KZ1) / 2);
+    for(const [a, b] of [[3.983, 4.446], [4.446, 4.906]]) k.rbox(b - a - .004, UY1 - UY0 - .004, .018, .002, M.WHT, (a + b) / 2, (UY0 + UY1) / 2, UZ0 + .009);
+    k.box(.60, UY1 - (UY0 + .20), .35, M.WHT, HX, (UY0 + .20 + UY1) / 2, (UZ0 + KZ1) / 2);              // 煙機上櫃
+    k.rbox(.60, .10, .40, .006, M.STL, HX, UY0 + .05, KZ1 - .20);                                          // 煙機罩
+    k.box(.56, .012, .30, M.BLK, HX, UY0 + .003, KZ1 - .18, { uv: false });                                // 罩底黑濾網
     const LEDZ = UZ0 + .04;                                                                                   // LED 燈條靠吊櫃前緣（離背板 0.32 m）
-    k.box(4.90 - 3.99, .012, .02, M.LED, (3.99 + 4.90) / 2, UY0 - .006, LEDZ, { uv: false });              // 櫃下 LED 燈條
+    k.box(4.906 - 3.996, .012, .02, M.LED, (3.996 + 4.906) / 2, UY0 - .006, LEDZ, { uv: false });          // 櫃下 LED 燈條
     // 檯面上的小物：霧黑水壺、橡木砧板、兩個白瓷罐（爐與水槽之間）
     const KY = TOP + TT;
-    k.cyl(.075, .085, .17, M.BLK, 4.36, KY + .085, 10.20, { seg: 24 });
-    k.cyl(.012, .016, .11, M.BLK, 4.36 - .085, KY + .13, 10.20, { seg: 8, rot: [0, 0, .9] });                // 壺嘴
-    k.torus(.06, .009, M.BLK, 4.36, KY + .20, 10.20, { arc: Math.PI, rot: [0, 0, 0], ts: 20 });                 // 提把
-    k.rbox(.38, .016, .26, .004, M.OAKL, 4.72, KY + .008, 10.21, { rot: [0, .18, 0] });
-    k.cyl(.048, .045, .15, M.CER, 4.10, KY + .075, 10.27, { seg: 20 }); k.cyl(.042, .040, .12, M.CER, 4.21, KY + .06, 10.29, { seg: 20 });
+    k.cyl(.075, .085, .17, M.BLK, 4.366, KY + .085, 10.174, { seg: 24 });
+    k.cyl(.012, .016, .11, M.BLK, 4.366 - .085, KY + .13, 10.174, { seg: 8, rot: [0, 0, .9] });             // 壺嘴
+    k.torus(.06, .009, M.BLK, 4.366, KY + .20, 10.174, { arc: Math.PI, rot: [0, 0, 0], ts: 20 });              // 提把
+    k.rbox(.38, .016, .26, .004, M.OAKL, 4.726, KY + .008, 10.184, { rot: [0, .18, 0] });
+    k.cyl(.048, .045, .15, M.CER, 4.106, KY + .075, 10.244, { seg: 20 }); k.cyl(.042, .040, .12, M.CER, 4.216, KY + .06, 10.264, { seg: 20 });
     k.done();
     collide(KX0, CZ0, KX1, KZ1, 1.0);
     // 櫃下燈：'under' ＝ 往下打的寬角聚光；放在 LED 燈條正下方（燈條中心 x 4.445），照檯面與背板下半
     //   一盞點狀聚光打在 0.32 m 外的背板上會是一圈圓亮斑（真的燈條是一整條）→ 亮度收到 0.75，亮斑不會白掉
-    lamps.push({ pos: new THREE.Vector3(4.445, UY0 - .015, LEDZ), kind: 'under', room: '廚房', color: 0xfff1dc, power: 0.75 });
+    lamps.push({ pos: new THREE.Vector3(4.451, UY0 - .015, LEDZ), kind: 'under', room: '廚房', color: 0xfff1dc, power: 0.75 });
 
-    // ---- 北牆：靠西實線櫃（規格 x 3.211–3.999, z 8.442–8.881）→ 橡木矮櫃 + 微波爐 ----
-    const NX0 = KX0, NX1 = 3.999, NZ0 = 8.442, NZ1 = 8.881;
+    // ---- 北牆：靠西實線櫃（規格 x 3.228–4.005, z 8.338–8.765）→ 橡木矮櫃 + 微波爐 ----
+    const NX0 = KX0, NX1 = 4.005, NZ0 = 8.338, NZ1 = 8.765;
     const n = item('kitchen_north_cabinet');
     n.box(NX1 - NX0, .10, NZ1 - NZ0 - .05, M.DARKW, (NX0 + NX1) / 2, FT + .05, (NZ0 + NZ1 - .05) / 2);
     n.box(NX1 - NX0, CH - .10, NZ1 - NZ0 - .02, M.OAK, (NX0 + NX1) / 2, FT + .10 + (CH - .10) / 2, (NZ0 + NZ1 - .02) / 2);
@@ -576,10 +585,9 @@ export default async function buildPublic(ctx){
       n.rbox(b - a - .004, CH - .10 - .004, .018, .002, M.OAK, (a + b) / 2, FT + .10 + (CH - .10) / 2, NZ1 - .009);
       n.box(b - a - .06, .012, .004, M.BLK, (a + b) / 2, FT + CH - .014, NZ1 - .001);
     }
-    // 檯面：前緣出 1.5 cm；西端貼牆處讓開陽台門的門框線板（x ≤ 3.231、z ≥ 8.882）── 石材在門框前切一個缺口
-    const QX0 = 3.233, QX1 = NX1 + .01, QZ1 = NZ1 + .015;
+    // 檯面：前緣出 1.5 cm（到 z 8.78）；陽台門的門框線板從 z 8.815 起 → 碰不到，不用切缺口（v4 門洞比較北時要切）
+    const QX0 = NX0, QX1 = NX1 + .01, QZ1 = NZ1 + .015;
     n.rbox(QX1 - QX0, .03, QZ1 - NZ0, .004, M.QTZ, (QX0 + QX1) / 2, TOP + .015, (NZ0 + QZ1) / 2);
-    n.box(.022, .03, 8.879 - NZ0, M.QTZ, NX0 + .011, TOP + .015, (NZ0 + 8.879) / 2);   // 缺口北側補到牆（跟主片重疊 8 mm，蓋住圓角的縫）
     // 微波爐（黑玻璃門 + 不鏽鋼把手）
     const mx = (NX0 + NX1) / 2, mz = (NZ0 + NZ1) / 2 + .02;
     n.rbox(.46, .27, .34, .008, M.GRY, mx, TOP + .03 + .135, mz);
@@ -589,9 +597,9 @@ export default async function buildPublic(ctx){
     n.done();
     collide(NX0, NZ0, NX1, NZ1, 1.2);
 
-    // ---- 冰箱（虛線冰箱位 x 4.065–4.776, z 8.435–9.097）：無印式霧面白、上冷藏門＋下冷凍抽屜、平面內嵌把手 ----
-    // 深度做 0.62（在虛線框內）；把手做成平的溝槽、不凸出 → 冰箱門面到檯面前緣 0.825 m，走道保持 ≥ 0.8
-    const FX0 = 4.075, FX1 = 4.765, FZ0 = 8.44, FZ1 = 9.06, FH = 1.80;
+    // ---- 冰箱（虛線冰箱位 x 4.071–4.782, z 8.331–8.993）：無印式霧面白、上冷藏門＋下冷凍抽屜、平面內嵌把手 ----
+    // 深度做 0.62（在虛線框內）；把手做成平的溝槽、不凸出 → 冰箱門面到檯面前緣 0.9 m，走道保持 ≥ 0.8
+    const FX0 = 4.081, FX1 = 4.771, FZ0 = 8.336, FZ1 = 8.956, FH = 1.80;
     const f = item('fridge');
     f.rbox(FX1 - FX0, FH - .08, FZ1 - FZ0, .012, M.FRG, (FX0 + FX1) / 2, FT + .08 + (FH - .08) / 2, (FZ0 + FZ1) / 2);
     f.box(FX1 - FX0 - .04, .08, FZ1 - FZ0 - .06, M.DARKW, (FX0 + FX1) / 2, FT + .04, (FZ0 + FZ1) / 2 - .03);    // 內縮底座
@@ -603,11 +611,11 @@ export default async function buildPublic(ctx){
   }
 
   /* ============================================================
-     7. 陽台（x 0.055–3.056, z 8.424–9.987）：洗衣機、洗衣槽在北牆下，AC 室外機在百葉後
+     7. 陽台（x 0–3.075, z 8.35–10.025；圖：307.5 寬、到女兒牆 182.5）：洗衣機、洗衣槽在北牆下，AC 室外機在百葉後
      ============================================================ */
   {
-    // 洗衣機（虛線 X 框 x 0.025–0.798, z 8.431–9.201）：滾筒式、門朝南
-    const WX = 0.43, WZ0 = 8.45, WD = .62, WW = .60, WH = .85;
+    // 洗衣機（虛線 X 框 x 0–0.743, z 8.357–9.127）：滾筒式、門朝南
+    const WX = 0.375, WZ0 = 8.376, WD = .62, WW = .60, WH = .85;
     const w = item('washer');
     w.rbox(WW, WH - .03, WD, .02, M.WHT, WX, FT + .03 + (WH - .03) / 2, WZ0 + WD / 2);
     w.box(WW - .06, .03, WD - .06, M.DARKW, WX, FT + .015, WZ0 + WD / 2);
@@ -618,8 +626,8 @@ export default async function buildPublic(ctx){
     w.done();
     collide(WX - WW / 2, WZ0, WX + WW / 2, WZ0 + WD, WH);
 
-    // 洗衣槽（虛線 x 0.887–1.419, z 8.450–8.870）：淺灰櫃 + 不鏽鋼槽 + 壁式龍頭
-    const LX0 = 0.887, LX1 = 1.417, LZ0 = 8.45, LZ1 = 8.87, LH = .82;
+    // 洗衣槽（虛線 x 0.832–1.364, z 8.376–8.796）：淺灰櫃 + 不鏽鋼槽 + 壁式龍頭
+    const LX0 = 0.832, LX1 = 1.362, LZ0 = 8.376, LZ1 = 8.796, LH = .82;
     const s = item('laundry_sink');
     s.rbox(LX1 - LX0, LH - .08 - .24, LZ1 - LZ0, .008, M.GRY, (LX0 + LX1) / 2, FT + .08 + (LH - .08 - .24) / 2, (LZ0 + LZ1) / 2);
     s.box(LX1 - LX0, .24, .012, M.GRY, (LX0 + LX1) / 2, FT + LH - .12, LZ1 - .006); s.box(LX1 - LX0, .24, .012, M.GRY, (LX0 + LX1) / 2, FT + LH - .12, LZ0 + .006);
@@ -643,8 +651,8 @@ export default async function buildPublic(ctx){
     s.done();
     collide(LX0, LZ0, LX1, LZ1, LH);
 
-    // AC 室外機（虛線 x 0.302–1.231, z 9.684–10.041 → 女兒牆內面 9.987 前）：架高 10 cm，風扇朝百葉
-    const AX0 = 0.32, AX1 = 1.22, AZ0 = 9.68, AZ1 = 9.962, AY0 = FT + .10, AH = .62;   // 風扇護網凸出 1.8 cm → 本體前緣收到 9.962，護網剛好不碰女兒牆（9.987）
+    // AC 室外機（虛線 x 0.247–1.176 → 女兒牆內面 10.025 前）：架高 10 cm，風扇朝百葉
+    const AX0 = 0.265, AX1 = 1.165, AZ0 = 9.718, AZ1 = 10.0, AY0 = FT + .10, AH = .62;   // 風扇護網凸出 1.8 cm → 本體前緣收到 10.0，護網剛好不碰女兒牆（10.025）
     const a = item('ac_unit');
     a.rbox(AX1 - AX0, AH, AZ1 - AZ0, .012, M.GRY, (AX0 + AX1) / 2, AY0 + AH / 2, (AZ0 + AZ1) / 2);
     a.cyl(.235, .235, .006, M.BLK, AX0 + .33, AY0 + AH / 2, AZ1 + .002, { seg: 36, rot: [Math.PI / 2, 0, 0] });
@@ -652,7 +660,7 @@ export default async function buildPublic(ctx){
     for(let i = 0; i < 3; i++) a.box(.47, .012, .006, M.GRY, AX0 + .33, AY0 + AH / 2, AZ1 + .008, { rot: [0, 0, i * Math.PI / 3] });
     for(let y = AY0 + .08; y < AY0 + AH - .06; y += .045) a.box(.008, .012, AZ1 - AZ0 - .06, M.BLK, AX1 + .002, y, (AZ0 + AZ1) / 2);   // 側面進風格柵
     for(const px of [AX0 + .10, AX1 - .10]) a.box(.05, .10, AZ1 - AZ0 - .04, M.STL, px, FT + .05, (AZ0 + AZ1) / 2);                    // 腳架
-    a.cyl(.012, .012, AX0 - .055, M.GRY, (0.055 + AX0) / 2, AY0 + .12, AZ0 + .06, { seg: 8, rot: [0, 0, Math.PI / 2] });                                  // 冷媒管往牆
+    a.cyl(.012, .012, AX0, M.GRY, AX0 / 2, AY0 + .12, AZ0 + .06, { seg: 8, rot: [0, 0, Math.PI / 2] });                                  // 冷媒管往牆
     a.done();
     collide(AX0, AZ0, AX1, AZ1, AY0 + AH);
   }

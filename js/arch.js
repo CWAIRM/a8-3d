@@ -1,6 +1,7 @@
 /* ============================================================
    arch.js — 建築本體：樓板、天花板、外牆、隔間牆、柱子、管道間、門、窗、玻璃隔屏、女兒牆
-   尺寸全部照 layout/spec_final.json（公尺，原點＝西外牆內面 × 北外牆內面；X 東、Z 南、Y 上）。
+   尺寸照建商有標公分的平面圖（ref/plan_11_dims.jpg），標註沒寫到的沿用 layout/spec_final.json；逐條見 layout/spec_v5_dims.md
+   （公尺，原點＝西外牆內面 × 北外牆內面；X 東、Z 南、Y 上）。
    做法：所有固定不動的牆體用「同材質合併成一個 mesh」（每種材質一個 draw call），
    UV 直接用世界座標公尺 → 貼圖 1:1、牆段之間沒有接縫。門片、淋浴門是獨立的 Group。
    ============================================================ */
@@ -199,9 +200,9 @@ export default async function buildArch(ctx){
      4. 底座樓板、各房間地板、天花板、天空
      ============================================================ */
   // 底座：整棟的樓板切片（淺米色），柱子腳下另外補墊
-  boxS(-0.15, -0.30, -0.15, 9.126, 0.0, 10.571, MAT.SLAB);
-  // 四支角柱（規格書尺寸；NW 柱內角由 (0.018,−0.059) 貼齊到 (0,0)、SW 柱北面貼齊臥室三南牆面、SE 柱北面貼齊次浴北牆面，差 ≤2.3 cm）
-  const COLS = { NW: [-1.131, -1.16, 0.0, 0.0], NE: [8.2, -1.108, 9.314, 0.023], SW: [-1.108, 8.257, 0.036, 9.399], SE: [7.736, 8.26, 9.077, 9.179] };
+  boxS(-0.15, -0.30, -0.15, 9.10, 0.0, 10.545, MAT.SLAB);
+  // 四支角柱（規格書尺寸；NW 柱內角貼齊 (0,0)、NE 柱跟著東牆內面（8.95）、SW 柱北面貼齊臥室三南牆面、SE 柱北面貼齊次浴北牆面）
+  const COLS = { NW: [-1.131, -1.16, 0.0, 0.0], NE: [8.174, -1.108, 9.288, 0.023], SW: [-1.108, 8.20, 0.036, 9.342], SE: [7.736, 8.20, 9.10, 9.116] };
   for(const k of ['NW', 'NE', 'SW']){ const c = COLS[k]; boxS(c[0], -0.30, c[1], c[2], -0.006, c[3], MAT.SLAB); }
 
   // 各房間地板（牆面到牆面，一間一片；同材質相鄰片因為 UV 是世界座標所以看不出接縫）
@@ -210,15 +211,15 @@ export default async function buildArch(ctx){
   const floorRect = (r, mat, top = FLOOR_TOP) => boxF(r[0], top - 0.04, r[1], r[2], top, r[3], { py: mat, nx: mat, px: mat, nz: mat, pz: mat });
   for(const k in R) for(const q of R[k].rects) floorRect(q, MAT[FLOOR[k] || 'FLW']);
   // 門洞地板：木地板連過去的洞口
-  floorRect([4.497, 2.999, 5.437, 3.149], MAT.FLW);   // 臥室二門洞
-  floorRect([3.364, 4.090, 4.125, 4.240], MAT.FLW);   // 前室門洞
-  floorRect([4.700, 7.325, 4.850, 8.260], MAT.FLW);   // 臥室三門洞
-  floorRect([5.072, 8.260, 5.982, 8.424], MAT.FLT);   // 廚房拉門洞（磁磚接過去）
+  floorRect([4.565, 3.020, 5.465, 3.140], MAT.FLW);   // 臥室二門洞（圖：90）
+  floorRect([3.364, 4.040, 4.164, 4.160], MAT.FLW);   // 前室門洞（圖：80）
+  floorRect([4.700, 7.300, 4.850, 8.200], MAT.FLW);   // 臥室三門洞（圖：90）
+  floorRect([5.115, 8.200, 6.015, 8.320], MAT.FLT);   // 廚房拉門洞（圖：90；磁磚接過去）
   // 石材門檻（略高 5 mm）：大門、兩間浴室、陽台門
-  floorRect([8.976, 7.056, 9.126, 8.124], MAT.STN, FLOOR_TOP + 0.005);
-  floorRect([3.214, 4.921, 3.364, 5.723], MAT.STN, FLOOR_TOP + 0.005);
-  floorRect([6.808, 8.260, 7.587, 8.410], MAT.STN, FLOOR_TOP + 0.005);
-  floorRect([3.056, 8.912, 3.219, 9.730], MAT.STN, FLOOR_TOP + 0.005);
+  floorRect([8.950, 6.996, 9.100, 8.064], MAT.STN, FLOOR_TOP + 0.005);
+  floorRect([3.214, 4.875, 3.364, 5.675], MAT.STN, FLOOR_TOP + 0.005);
+  floorRect([6.811, 8.200, 7.611, 8.300], MAT.STN, FLOOR_TOP + 0.005);
+  floorRect([3.075, 8.845, 3.225, 9.745], MAT.STN, FLOOR_TOP + 0.005);
 
   /* ============================================================
      5. 外殼：四支 RC 角柱、窗牆（北、西）、RC 牆（東、南、廚房西、臥室三南、陽台）
@@ -232,7 +233,7 @@ export default async function buildArch(ctx){
   };
   for(const k in COLS){ const c = COLS[k]; boxF(c[0], 0, c[1], c[2], H, c[3], { ...COL_FACES[k], py: MAT.COL, ny: MAT.COL }); collide(c[0], c[1], c[2], c[3]); }
   // NE 柱佔到客廳角落：它朝室內的那一面補踢腳板
-  baseboard('x', 8.2, 8.976, COLS.NE[3], +1);
+  baseboard('x', 8.174, 8.95, COLS.NE[3], +1);
   ctx.columns = Object.entries(COLS).map(([k, c]) => ({ id: 'C_' + k, rect: [...c] }));
 
   /* ---- 窗牆（北、西）：矮牆 0–0.90 ＋ 玻璃帶 0.90–2.45 ＋ 上牆 2.45–3.25 ----
@@ -274,93 +275,94 @@ export default async function buildArch(ctx){
                          fixed: (c0 + c1) / 2, c0, c1, room: roomOf((s + e) / 2), type, hinge: hinge || null, normal });
     }
   }
-  // 北窗牆：x 0→8.2（NW 柱到 NE 柱），牆體 z −0.15..0；三扇外開窗都是東鉸鏈
-  facade('x', 0, 8.2, -0.15, 0, [
-    [0.000, 2.029, 'fixed', 'FIX_MBR_N1'],
-    [2.029, 2.820, 'casement', 'WIN_MBR_N', 'east'],
-    [2.820, 2.964, 'block'],                       // 主臥／臥室二隔間頂到窗牆
-    [2.964, 4.598, 'fixed', 'FIX_BRN_N'],
-    [4.598, 5.431, 'casement', 'WIN_BRN_N', 'east'],
-    [5.431, 5.574, 'block'],                       // 臥室二／客廳隔間
-    [5.574, 7.254, 'fixed', 'FIX_LR_N'],
-    [7.254, 8.144, 'casement', 'WIN_LR_N', 'east'],
-    [8.144, 8.200, 'block'],                       // 窗框端塊，緊貼 NE 柱
-  ], x => x < 2.841 ? '主臥室' : x < 5.437 ? '臥室二' : '客廳');
-  // 西窗牆：z 0→8.257，牆體 x −0.15..0；三扇外開窗都是南鉸鏈；z≈1.63 有直料記號
-  facade('z', 0, 8.257, -0.15, 0, [
+  // 北窗牆：x 0→8.174（NW 柱到 NE 柱），牆體 z −0.15..0；三扇外開窗都是東鉸鏈、緊貼每間房的東側隔間／柱
+  facade('x', 0, 8.174, -0.15, 0, [
+    [0.000, 2.053, 'fixed', 'FIX_MBR_N1'],
+    [2.053, 2.844, 'casement', 'WIN_MBR_N', 'east'],
+    [2.844, 2.985, 'block'],                       // 主臥／臥室二隔間頂到窗牆
+    [2.985, 4.626, 'fixed', 'FIX_BRN_N'],
+    [4.626, 5.459, 'casement', 'WIN_BRN_N', 'east'],
+    [5.459, 5.585, 'block'],                       // 臥室二／客廳隔間
+    [5.585, 7.228, 'fixed', 'FIX_LR_N'],
+    [7.228, 8.118, 'casement', 'WIN_LR_N', 'east'],
+    [8.118, 8.174, 'block'],                       // 窗框端塊，緊貼 NE 柱
+  ], x => x < 2.865 ? '主臥室' : x < 5.465 ? '臥室二' : '客廳');
+  // 西窗牆：z 0→8.20（圖：404+12+153+12+239），牆體 x −0.15..0；三扇外開窗都是南鉸鏈、緊貼每間房的南牆；z≈1.63 有直料記號
+  facade('z', 0, 8.20, -0.15, 0, [
     [0.000, 1.590, 'fixed', 'FIX_MBR_W1'],
     [1.590, 1.674, 'block'],                       // MULLION_MBR_W（圖上的直料記號）
-    [1.674, 3.175, 'fixed', 'FIX_MBR_W2'],
-    [3.175, 4.066, 'casement', 'WIN_MBR_W', 'south'],
-    [4.066, 4.245, 'block'],                       // 主浴北牆頂到窗牆
-    [4.245, 4.867, 'fixed', 'FIX_MBATH_W'],
-    [4.867, 5.741, 'casement', 'WIN_MBATH_W', 'south'],
-    [5.741, 5.888, 'block'],                       // 主浴南牆頂到窗牆
-    [5.888, 7.307, 'fixed', 'FIX_BR2_W'],
-    [7.307, 8.196, 'casement', 'WIN_BR2_W', 'south'],
-    [8.196, 8.257, 'block'],                       // 端塊，接臥室三南牆／SW 柱
-  ], z => z < 4.095 ? '主臥室' : z < 5.888 ? '主浴廁' : '臥室三',
-  [[0, 4.245, MAT.PL], [4.245, 5.738, MAT.TL], [5.738, 8.257, MAT.PL]]);   // 主浴段室內面貼磁磚
+    [1.674, 3.120, 'fixed', 'FIX_MBR_W2'],
+    [3.120, 4.011, 'casement', 'WIN_MBR_W', 'south'],
+    [4.011, 4.160, 'block'],                       // 主浴北牆頂到窗牆
+    [4.160, 4.816, 'fixed', 'FIX_MBATH_W'],
+    [4.816, 5.690, 'casement', 'WIN_MBATH_W', 'south'],
+    [5.690, 5.810, 'block'],                       // 主浴南牆頂到窗牆
+    [5.810, 7.250, 'fixed', 'FIX_BR2_W'],
+    [7.250, 8.139, 'casement', 'WIN_BR2_W', 'south'],
+    [8.139, 8.200, 'block'],                       // 端塊，接臥室三南牆／SW 柱
+  ], z => z < 4.04 ? '主臥室' : z < 5.81 ? '主浴廁' : '臥室三',
+  [[0, 4.16, MAT.PL], [4.16, 5.69, MAT.TL], [5.69, 8.20, MAT.PL]]);   // 主浴段室內面貼磁磚
 
   /* ---- RC 外牆 ---- */
   // 東牆（上段）：NE 柱到大門北側 jamb；大門洞 7.056–8.124；再到 SE 柱
-  wall('W_east_rc_upper', 'z', 0.023, 8.26, 8.976, 9.126, { A: MAT.PL, B: MAT.EX, ends: MAT.EX },
-       [{ a0: 7.056, a1: 8.124, y0: 0, y1: ENTRY_H }], [true, false]);
+  wall('W_east_rc_upper', 'z', 0.023, 8.20, 8.95, 9.10, { A: MAT.PL, B: MAT.EX, ends: MAT.EX },
+       [{ a0: 6.996, a1: 8.064, y0: 0, y1: ENTRY_H }], [true, false]);
   // 東牆（下段）：次浴廁東牆，SE 柱到南牆
-  wall('W_east_rc_lower', 'z', 9.179, 10.54, 8.898, 9.035, { A: MAT.TL, B: MAT.EX, ends: MAT.EX });
+  wall('W_east_rc_lower', 'z', 9.116, 10.514, 8.95, 9.087, { A: MAT.TL, B: MAT.EX, ends: MAT.EX });   // 次浴內寬 281.5（跟上段東牆同一條內面）
   // 南牆：廚房段（有窗）＋ 次浴廁段（有窗）
-  wall('W_south_rc_k', 'x', 3.219, 5.982, 10.376, 10.54, { A: MAT.PL, B: MAT.EX, ends: MAT.EX },
-       [{ a0: 4.984, a1: 5.812, y0: SILL_S, y1: HEAD_S }], [true, false]);
-  wall('W_south_rc_b', 'x', 5.982, 8.898, 10.376, 10.54, { A: MAT.TL, B: MAT.EX, ends: MAT.EX },
-       [{ a0: 6.617, a1: 7.467, y0: SILL_S, y1: HEAD_S }]);
+  wall('W_south_rc_k', 'x', 3.225, 6.015, 10.35, 10.514, { A: MAT.PL, B: MAT.EX, ends: MAT.EX },
+       [{ a0: 5.017, a1: 5.845, y0: SILL_S, y1: HEAD_S }], [true, false]);
+  wall('W_south_rc_b', 'x', 6.015, 8.95, 10.35, 10.514, { A: MAT.TL, B: MAT.EX, ends: MAT.EX },
+       [{ a0: 6.620, a1: 7.470, y0: SILL_S, y1: HEAD_S }]);
   // 臥室三南牆（對陽台，連續無開口）
-  wall('W_bed2_south', 'x', 0.036, 3.056, 8.26, 8.424, { A: MAT.PL, B: MAT.EX, ends: MAT.EX }, [], [true, false]);
-  // 廚房西牆（對陽台）：陽台門 8.912–9.73
-  wall('W_kitchen_west', 'z', 8.26, 10.54, 3.056, 3.219, { A: MAT.EX, B: MAT.PL, ends: MAT.EX },
-       [{ a0: 8.912, a1: 9.73, y0: 0, y1: DOOR_H }], [false, true]);
-  // 陽台西牆（SW 柱下方那段黑牆）
-  wall('W_balcony_west', 'z', 9.399, 10.571, -0.109, 0.055, { A: MAT.EX, B: MAT.EX });
+  wall('W_bed2_south', 'x', 0.036, 3.075, 8.20, 8.35, { A: MAT.PL, B: MAT.EX, ends: MAT.EX }, [], [true, false]);
+  // 廚房西牆（對陽台，圖：15 cm）：陽台門 8.845–9.745（圖：90）
+  wall('W_kitchen_west', 'z', 8.20, 10.514, 3.075, 3.225, { A: MAT.EX, B: MAT.PL, ends: MAT.EX },
+       [{ a0: 8.845, a1: 9.745, y0: 0, y1: DOOR_H }], [false, true]);
+  // 陽台西牆（SW 柱下方那段黑牆；內面＝西外牆內面同一條線，圖：陽台寬 307.5）
+  wall('W_balcony_west', 'z', 9.342, 10.545, -0.164, 0.0, { A: MAT.EX, B: MAT.EX });
 
-  /* ---- 陽台女兒牆：x 0.055–1.479 是 AC 百葉，1.479–3.056 是實牆 ---- */
+  /* ---- 陽台女兒牆（內面 z 10.025 ＝ 臥室三南牆面 8.20 往南 182.5 cm）：x 0–1.424 是 AC 百葉，1.424–3.075 是實牆 ---- */
   {
-    const z0 = 9.987, z1 = 10.219;
-    boxS(1.479, 0, z0, 3.056, PARAPET_H, z1, MAT.EX, MAT.EX); collide(1.479, z0, 3.056, z1, PARAPET_H);
-    boxS(1.479 - 0.005, PARAPET_H - 0.005, z0 - 0.01, 3.056, PARAPET_H + 0.03, z1 + 0.01, MAT.STN);     // 壓頂
+    const z0 = 10.025, z1 = 10.257, LV = 1.424;
+    boxS(LV, 0, z0, 3.075, PARAPET_H, z1, MAT.EX, MAT.EX); collide(LV, z0, 3.075, z1, PARAPET_H);
+    boxS(LV - 0.005, PARAPET_H - 0.005, z0 - 0.01, 3.075, PARAPET_H + 0.03, z1 + 0.01, MAT.STN);     // 壓頂
     // 百葉段：矮踢 + 鋁百葉片 + 兩端立柱 + 上橫料
-    boxS(0.055, 0, z0, 1.479, 0.12, z1, MAT.EX, MAT.EX); collide(0.055, z0, 1.479, z1, PARAPET_H);
+    boxS(0.0, 0, z0, LV, 0.12, z1, MAT.EX, MAT.EX); collide(0.0, z0, LV, z1, PARAPET_H);
     const zc = (z0 + z1) / 2;
-    boxS(0.055, 0.12, zc - 0.03, 0.105, PARAPET_H + 0.03, zc + 0.03, MAT.AL);
-    boxS(1.429, 0.12, zc - 0.03, 1.479, PARAPET_H + 0.03, zc + 0.03, MAT.AL);
-    boxS(0.055, PARAPET_H, zc - 0.05, 1.479, PARAPET_H + 0.03, zc + 0.05, MAT.AL);
-    for(let y = 0.18; y < PARAPET_H - 0.02; y += 0.075) boxS(0.105, y, zc - 0.045, 1.429, y + 0.018, zc + 0.045, MAT.AL);
-    archWalls.push({ id: 'W_balcony_parapet', axis: 'x', a: 0.055, b: 3.056, c0: z0, c1: z1, holes: [] });
+    boxS(0.0, 0.12, zc - 0.03, 0.05, PARAPET_H + 0.03, zc + 0.03, MAT.AL);
+    boxS(LV - 0.05, 0.12, zc - 0.03, LV, PARAPET_H + 0.03, zc + 0.03, MAT.AL);
+    boxS(0.0, PARAPET_H, zc - 0.05, LV, PARAPET_H + 0.03, zc + 0.05, MAT.AL);
+    for(let y = 0.18; y < PARAPET_H - 0.02; y += 0.075) boxS(0.05, y, zc - 0.045, LV - 0.05, y + 0.018, zc + 0.045, MAT.AL);
+    archWalls.push({ id: 'W_balcony_parapet', axis: 'x', a: 0.0, b: 3.075, c0: z0, c1: z1, holes: [] });
   }
 
   /* ============================================================
      6. 室內隔間（斜線牆 0.12–0.15）與浴室磁磚牆
      ============================================================ */
   const PLPL = { A: MAT.PL, B: MAT.PL };
-  wall('P_mbr_east',   'z', 0,     3.149, 2.841, 2.964, PLPL, [], [true, true]);      // 主臥／臥室二
-  wall('P_brN_east',   'z', 0,     3.149, 5.437, 5.574, PLPL, [], [true, true]);      // 臥室二／客廳
-  wall('P_brN_south',  'x', 2.964, 4.497, 2.999, 3.149, PLPL, [], [true, true]);      // 臥室二南牆（4.497–5.437 是門洞）
-  wall('P_stub',       'x', 4.125, 4.850, 4.090, 4.240, PLPL, [], [true, true]);      // 前室門邊的短牆
-  wall('P_corridor_L', 'z', 4.240, 7.325, 4.700, 4.850, PLPL, [], [true, true]);      // L 牆（7.325–8.26 是臥室三門洞）
-  wall('P_nook_south', 'x', 3.214, 4.700, 6.289, 6.426, PLPL, [], [true, true]);      // 前室／臥室三
-  wall('P_bath_se',    'z', 5.888, 6.289, 3.214, 3.364, PLPL, [], [true, true]);      // 主浴東南角往下那一小段
-  wall('P_kitchen_north','x', 3.219, 5.072, 8.26, 8.424, PLPL, [], [true, true]);     // 廚房北牆（5.072–5.982 是拉門洞）
-  // 主浴廁（磁磚牆）：北、南連續；東牆有門 4.921–5.723
-  wall('T_mbath_north', 'x', 0, 3.364, 4.095, 4.245, { A: MAT.PL, B: MAT.TL }, [], [true, false]);
-  wall('T_mbath_south', 'x', 0, 3.364, 5.738, 5.888, { A: MAT.TL, B: MAT.PL }, [], [false, true]);
-  wall('T_mbath_east',  'z', 4.245, 5.738, 3.214, 3.364, { A: MAT.TL, B: MAT.PL },
-       [{ a0: 4.921, a1: 5.723, y0: 0, y1: DOOR_H }], [false, true]);
-  // 次浴廁（磁磚牆）：西牆連續；北牆有門 6.808–7.587，頂到 SE 柱
-  wall('T_bath2_west',  'z', 8.26, 10.376, 5.982, 6.132, { A: MAT.PL, B: MAT.TL }, [], [true, false]);
-  wall('T_bath2_north', 'x', 6.132, 7.736, 8.26, 8.41, { A: MAT.PL, B: MAT.TL },
-       [{ a0: 6.808, a1: 7.587, y0: 0, y1: DOOR_H }], [true, false]);
-  // 管道間（磁磚包住的 X 框，滿高、封閉）
+  // 圖上標註：主臥 286.5｜隔間 12｜臥室二 248｜隔間 12｜客廳 336.5；走道 90；臥室二門 90；前室口 80；臥室三門 90；廚房門 90
+  wall('P_mbr_east',   'z', 0,     3.140, 2.865, 2.985, PLPL, [], [true, true]);      // 主臥／臥室二
+  wall('P_brN_east',   'z', 0,     3.140, 5.465, 5.585, PLPL, [], [true, true]);      // 臥室二／客廳
+  wall('P_brN_south',  'x', 2.985, 4.565, 3.020, 3.140, PLPL, [], [true, true]);      // 臥室二南牆（4.565–5.465 是門洞）；南面到前室短牆北面＝走道 90
+  wall('P_stub',       'x', 4.164, 4.850, 4.040, 4.160, PLPL, [], [true, true]);      // 前室門邊的短牆（跟主浴北牆同一條線）
+  wall('P_corridor_L', 'z', 4.160, 7.300, 4.700, 4.850, PLPL, [], [true, true]);      // L 牆（7.30–8.20 是臥室三門洞）
+  wall('P_nook_south', 'x', 3.214, 4.700, 6.289, 6.426, PLPL, [], [true, true]);      // 前室／臥室三（圖上沒標，沿用讀圖）
+  wall('P_bath_se',    'z', 5.810, 6.289, 3.214, 3.364, PLPL, [], [true, true]);      // 主浴東南角往下那一小段
+  wall('P_kitchen_north','x', 3.225, 5.115, 8.20, 8.32, PLPL, [], [true, true]);      // 廚房北牆（5.115–6.015 是拉門洞）
+  // 主浴廁（磁磚牆，圖：12｜153｜12）：北、南連續；東牆有門 4.875–5.675（圖：80）
+  wall('T_mbath_north', 'x', 0, 3.364, 4.040, 4.160, { A: MAT.PL, B: MAT.TL }, [], [true, false]);
+  wall('T_mbath_south', 'x', 0, 3.364, 5.690, 5.810, { A: MAT.TL, B: MAT.PL }, [], [false, true]);
+  wall('T_mbath_east',  'z', 4.160, 5.690, 3.214, 3.364, { A: MAT.TL, B: MAT.PL },
+       [{ a0: 4.875, a1: 5.675, y0: 0, y1: DOOR_H }], [false, true]);
+  // 次浴廁（磁磚牆）：西牆連續（圖：12）；北牆 10 cm、門 6.811–7.611（圖：80），頂到 SE 柱
+  wall('T_bath2_west',  'z', 8.20, 10.35, 6.015, 6.135, { A: MAT.PL, B: MAT.TL }, [], [true, false]);
+  wall('T_bath2_north', 'x', 6.135, 7.736, 8.20, 8.30, { A: MAT.PL, B: MAT.TL },
+       [{ a0: 6.811, a1: 7.611, y0: 0, y1: DOOR_H }], [true, false]);
+  // 管道間（磁磚包住的 X 框，滿高、封閉；大小沿用讀圖）
   const shaft = (id, x0, z0, x1, z1) => { boxS(x0, 0, z0, x1, H, z1, MAT.TL, MAT.TOP); collide(x0, z0, x1, z1); archWalls.push({ id, box: [x0, z0, x1, z1] }); };
-  shaft('T_mbath_shaft', 0.763, 4.245, 1.696, 4.587);
-  shaft('T_bath2_duct',  6.132, 9.699, 6.617, 10.376);
+  shaft('T_mbath_shaft', 0.763, 4.160, 1.696, 4.502);
+  shaft('T_bath2_duct',  6.135, 9.673, 6.617, 10.35);
 
   /* ============================================================
      7. 淋浴玻璃隔屏（固定片）＋ 浴缸旁的薄片（規格書低信心：玻璃或矮緣，這裡做成玻璃）
@@ -373,9 +375,9 @@ export default async function buildArch(ctx){
     else   boxS((x0 + x1) / 2 - 0.012, h, z0, (x0 + x1) / 2 + 0.012, h + 0.02, z1, MAT.AL);
     archWalls.push({ id, axis: dx ? 'x' : 'z', a: dx ? x0 : z0, b: dx ? x1 : z1, c0: dx ? z0 : x0, c1: dx ? z1 : x1, holes: [], glass: true });
   }
-  glassScreen('G_mbath_shower_fixed', 1.687, 4.587, 1.695, 5.090);   // 主浴淋浴間固定片（門在 5.09–5.725）
-  glassScreen('G_mbath_tub_divider',  0.758, 4.587, 0.766, 5.738);   // 浴缸／淋浴間之間
-  glassScreen('G_bath2_shower_fixed', 8.020, 9.814, 8.028, 10.376);  // 次浴固定片（門在 9.179–9.814）
+  glassScreen('G_mbath_shower_fixed', 1.687, 4.502, 1.695, 5.042);   // 主浴淋浴間固定片（門在 5.042–5.69）
+  glassScreen('G_mbath_tub_divider',  0.758, 4.502, 0.766, 5.690);   // 浴缸／淋浴間之間
+  glassScreen('G_bath2_shower_fixed', 8.020, 9.751, 8.028, 10.35);   // 次浴固定片（門在 9.116–9.751）
 
   /* ============================================================
      8. 門：門框 + 門片。只有平面圖有畫門（大門、陽台門、兩浴室門框、兩淋浴門）＋
@@ -526,37 +528,37 @@ export default async function buildArch(ctx){
   }
 
   // 大門：東牆，鉸鏈南、向內（西）開；做成關著、橡木（比室內門深一點）＋髮絲鋼把手；門框深灰鋼
-  swingDoor({ id: 'D_ENTRANCE', type: 'entrance', axis: 'z', a0: 7.056, a1: 8.124, c0: 8.976, c1: 9.126, h: ENTRY_H,
+  swingDoor({ id: 'D_ENTRANCE', type: 'entrance', axis: 'z', a0: 6.996, a1: 8.064, c0: 8.95, c1: 9.10, h: ENTRY_H,
               hinge: 'hi', hingeSide: 'south', into: '-', intoRoom: '餐廳', open: 0, rooms: ['餐廳', '室外'],
               mat: MAT.OAKD, handleMat: MAT.STL, frameMat: MAT.ALD, t: 0.05, leafOpts: { groove: false, panels: true } });
   // 陽台門：廚房西牆，鉸鏈南、往陽台（西）開 90°，鋁框玻璃門
-  swingDoor({ id: 'D_BALCONY', type: 'swing', axis: 'z', a0: 8.912, a1: 9.73, c0: 3.056, c1: 3.219, h: DOOR_H,
+  swingDoor({ id: 'D_BALCONY', type: 'swing', axis: 'z', a0: 8.845, a1: 9.745, c0: 3.075, c1: 3.225, h: DOOR_H,
               hinge: 'hi', hingeSide: 'south', into: '-', intoRoom: '陽台', open: 90, rooms: ['廚房', '陽台'],
               frameMat: MAT.AL, arch: 0.03, t: 0.045, leaf: alLeaf });
-  // 主臥室門：在 P_mbr_east 牆線上（洞 = 牆端到主浴北牆面 3.149–4.095）；鉸鏈南、往房內（西）開，門片貼在房間南牆上
-  swingDoor({ id: 'O_MBR', axis: 'z', a0: 3.149, a1: 4.095, c0: 2.841, c1: 2.964, h: DOOR_H,
+  // 主臥室門：在 P_mbr_east 牆線上（洞 = 牆端到主浴北牆面 3.14–4.04 ＝ 走道寬 90）；鉸鏈南、往房內（西）開，門片貼在房間南牆上
+  swingDoor({ id: 'O_MBR', axis: 'z', a0: 3.140, a1: 4.040, c0: 2.865, c1: 2.985, h: DOOR_H,
               hinge: 'hi', hingeSide: 'south', into: '-', intoRoom: '主臥室', open: 90, rooms: ['走道', '主臥室'] });
-  // 臥室二門：南牆洞 4.497–5.437；鉸鏈東、往房內（北）開，門片貼在房間東牆上
-  swingDoor({ id: 'O_BRN', axis: 'x', a0: 4.497, a1: 5.437, c0: 2.999, c1: 3.149, h: DOOR_H,
+  // 臥室二門：南牆洞 4.565–5.465（圖：90）；鉸鏈東、往房內（北）開，門片貼在房間東牆上
+  swingDoor({ id: 'O_BRN', axis: 'x', a0: 4.565, a1: 5.465, c0: 3.020, c1: 3.140, h: DOOR_H,
               hinge: 'hi', hingeSide: 'east', into: '-', intoRoom: '臥室二', open: 90, rooms: ['走道', '臥室二'] });
-  // 前室門：短牆線上的洞 3.364–4.125；鉸鏈西、往前室（南）開，門片貼在主浴東牆外側（門片尖端離主浴門洞還有 3 cm）
-  swingDoor({ id: 'O_ANTE', axis: 'x', a0: 3.364, a1: 4.125, c0: 4.090, c1: 4.240, h: DOOR_H,
+  // 前室門：短牆線上的洞 3.364–4.164（圖：80）；鉸鏈西、往前室（南）開，門片貼在主浴東牆外側
+  swingDoor({ id: 'O_ANTE', axis: 'x', a0: 3.364, a1: 4.164, c0: 4.040, c1: 4.160, h: DOOR_H,
               hinge: 'lo', hingeSide: 'west', into: '+', intoRoom: '前室', open: 90, rooms: ['走道', '前室'] });
-  // 主浴廁門：東牆洞 4.921–5.723；圖上只有門框沒畫弧 → 做成鉸鏈南、往浴室內（西）開 90°，貼在浴室南牆上
-  swingDoor({ id: 'D_MBATH', axis: 'z', a0: 4.921, a1: 5.723, c0: 3.214, c1: 3.364, h: DOOR_H,
+  // 主浴廁門：東牆洞 4.875–5.675（圖：80）；圖上只有門框沒畫弧 → 做成鉸鏈南、往浴室內（西）開 90°，貼在浴室南牆上
+  swingDoor({ id: 'D_MBATH', axis: 'z', a0: 4.875, a1: 5.675, c0: 3.214, c1: 3.364, h: DOOR_H,
               hinge: 'hi', hingeSide: 'south', into: '-', intoRoom: '主浴廁', open: 90, rooms: ['前室', '主浴廁'] });
-  // 臥室三門：L 牆下端與廚房牆之間 7.325–8.26；鉸鏈南、往房內（西）開，門片貼在房間南牆（RC）上
-  swingDoor({ id: 'O_BR2', axis: 'z', a0: 7.325, a1: 8.26, c0: 4.700, c1: 4.850, h: DOOR_H,
+  // 臥室三門：L 牆下端與廚房牆之間 7.30–8.20（圖：90）；鉸鏈南、往房內（西）開，門片貼在房間南牆（RC）上
+  swingDoor({ id: 'O_BR2', axis: 'z', a0: 7.300, a1: 8.200, c0: 4.700, c1: 4.850, h: DOOR_H,
               hinge: 'hi', hingeSide: 'south', into: '-', intoRoom: '臥室三', open: 90, rooms: ['餐廳', '臥室三'] });
-  // 廚房拉門：洞 5.072–5.982；橡木框霧玻璃單片拉門，吊在餐廳側，往東滑開（停在次浴門框前 6.79）
-  slidingDoor({ id: 'O_KITCHEN', axis: 'x', a0: 5.072, a1: 5.982, c0: 8.26, c1: 8.424, h: DOOR_H,
+  // 廚房拉門：洞 5.115–6.015（圖：90）；橡木框霧玻璃單片拉門，吊在餐廳側，往東滑開（停在次浴門框前 6.79）
+  slidingDoor({ id: 'O_KITCHEN', axis: 'x', a0: 5.115, a1: 6.015, c0: 8.20, c1: 8.32, h: DOOR_H,
                 side: '-', toward: '+', parkEdge: 6.79, intoRoom: '廚房', rooms: ['餐廳', '廚房'], glass: true });
-  // 次浴廁門：北牆洞 6.808–7.587；圖上只有門框沒畫弧 → 做成橡木拉門，吊在玄關側、往東滑到 SE 柱前（全開）
-  slidingDoor({ id: 'D_BATH2', axis: 'x', a0: 6.808, a1: 7.587, c0: 8.26, c1: 8.41, h: DOOR_H,
-                side: '-', toward: '+', parkEdge: 7.587 + 0.83, intoRoom: '次浴廁', rooms: ['餐廳', '次浴廁'], glass: false });
+  // 次浴廁門：北牆洞 6.811–7.611（圖：80）；圖上只有門框沒畫弧 → 做成橡木拉門，吊在玄關側、往東滑到 SE 柱前（全開）
+  slidingDoor({ id: 'D_BATH2', axis: 'x', a0: 6.811, a1: 7.611, c0: 8.20, c1: 8.30, h: DOOR_H,
+                side: '-', toward: '+', parkEdge: 7.611 + 0.85, intoRoom: '次浴廁', rooms: ['餐廳', '次浴廁'], glass: false });
   // 淋浴玻璃門：主浴（隔屏南端，鉸鏈南，向東開）、次浴（隔屏北端，鉸鏈在柱面，向西開）；都做成半開 40°
-  pivotGlass({ id: 'D_MBATH_SHOWER', a0: 5.090, a1: 5.738, c: 1.691, hinge: 'hi', into: '+', open: 40, intoRoom: '主浴廁', rooms: ['主浴廁', '淋浴間'] });
-  pivotGlass({ id: 'D_BATH2_SHOWER', a0: 9.179, a1: 9.814, c: 8.024, hinge: 'lo', into: '-', open: 40, intoRoom: '次浴廁', rooms: ['次浴廁', '淋浴間'] });
+  pivotGlass({ id: 'D_MBATH_SHOWER', a0: 5.042, a1: 5.690, c: 1.691, hinge: 'hi', into: '+', open: 40, intoRoom: '主浴廁', rooms: ['主浴廁', '淋浴間'] });
+  pivotGlass({ id: 'D_BATH2_SHOWER', a0: 9.116, a1: 9.751, c: 8.024, hinge: 'lo', into: '-', open: 40, intoRoom: '次浴廁', rooms: ['次浴廁', '淋浴間'] });
 
   /* ============================================================
      9. 南牆兩扇鋁製橫拉窗（型式圖上沒畫：假設橫拉窗）
@@ -572,8 +574,8 @@ export default async function buildArch(ctx){
     boxS(x0 - 0.02, y0 - 0.02, z0 - 0.045, x1 + 0.02, y0 + 0.01, z0 + 0.03, MAT.STN);       // 室內窗台板
     ctx.windows.push({ id, axis: 'x', at: xm, at0: x0, at1: x1, w: x1 - x0, y0, y1, fixed: (z0 + z1) / 2, c0: z0, c1: z1, room, type: 'sliding', hinge: null, normal: [0, 1] });
   }
-  slidingWindow('WIN_KITCHEN_S', '廚房', 4.984, 5.812, 10.376, 10.54, SILL_S, HEAD_S);
-  slidingWindow('WIN_BATH2_S',   '次浴廁', 6.617, 7.467, 10.376, 10.54, SILL_S, HEAD_S);
+  slidingWindow('WIN_KITCHEN_S', '廚房', 5.017, 5.845, 10.35, 10.514, SILL_S, HEAD_S);
+  slidingWindow('WIN_BATH2_S',   '次浴廁', 6.620, 7.470, 10.35, 10.514, SILL_S, HEAD_S);
 
   /* ============================================================
      10. 天花板（走路模式可開關）、天空背景
@@ -582,9 +584,9 @@ export default async function buildArch(ctx){
   {
     const roof = new THREE.Group(); roof.name = 'roof';
     const rf = { px: MAT.EX, nx: MAT.EX, pz: MAT.EX, nz: MAT.EX, py: MAT.EX, ny: MAT.CEIL };
-    boxF(-0.15, H, -0.15, 9.126, H + 0.12, 8.26, rf);      // 北半（含客餐廳、臥室、走道）
-    boxF(3.056, H, 8.26, 9.126, H + 0.12, 10.54, rf);      // 廚房＋次浴
-    boxF(-0.15, H, 8.26, 3.056, H + 0.12, 10.219, rf);     // 陽台（到女兒牆外緣）
+    boxF(-0.15, H, -0.15, 9.10, H + 0.12, 8.20, rf);       // 北半（含客餐廳、臥室、走道）
+    boxF(3.075, H, 8.20, 9.10, H + 0.12, 10.514, rf);      // 廚房＋次浴
+    boxF(-0.15, H, 8.20, 3.075, H + 0.12, 10.257, rf);     // 陽台（到女兒牆外緣）
     flushBuckets(roof, 'roof');
     scene.add(roof); ctx.roof = roof;
   }
@@ -617,28 +619,29 @@ export default async function buildArch(ctx){
   /* ============================================================
      11. 登記給其他模組：範圍、設備位置、牆表
      ============================================================ */
-  ctx.bounds = { x0: 0, z0: 0, x1: 8.976, z1: 10.376 };   // 可走的室內盒（含陽台在內）
+  ctx.bounds = { x0: 0, z0: 0, x1: 8.95, z1: 10.35 };   // 可走的室內盒（含陽台在內）
   ctx.archWalls = archWalls;
   // 規格書的設備（公尺）：rect 已夾到實際牆面內；spec 是規格書原值
   const FX = [
-    ['F_tub',            '主浴廁', 'bathtub',            [0.069, 4.293, 0.700, 5.755]],
-    ['F_mbath_shower',   '主浴廁', 'shower_stall',       [0.770, 4.587, 1.687, 5.740]],
-    ['F_mbath_toilet',   '主浴廁', 'toilet',             [1.880, 4.242, 2.281, 4.967]],
-    ['F_mbath_vanity',   '主浴廁', 'vanity_counter',     [2.449, 4.249, 3.213, 4.706]],
-    ['F_mbath_shaft',    '主浴廁', 'pipe_shaft',         [0.763, 4.245, 1.696, 4.587]],
-    ['F_bath2_vanity',   '次浴廁', 'vanity_counter',     [6.170, 8.649, 6.613, 9.457]],
-    ['F_bath2_toilet',   '次浴廁', 'toilet',             [6.874, 9.696, 7.277, 10.393]],
-    ['F_bath2_shower',   '次浴廁', 'shower_stall',       [8.024, 9.169, 8.915, 10.454]],
-    ['F_bath2_duct',     '次浴廁', 'duct_shaft',         [6.132, 9.699, 6.617, 10.376]],
-    ['F_kitchen_counter','廚房',   'kitchen_counter',    [3.313, 9.900, 5.856, 10.386]],
-    ['F_kitchen_sink',   '廚房',   'sink',               [5.038, 9.909, 5.803, 10.321]],
-    ['F_kitchen_hob',    '廚房',   'cooktop_assumed',    [3.379, 9.914, 3.975, 10.308]],
-    ['F_kitchen_cabinet','廚房',   'tall_cabinet',       [3.211, 8.442, 3.999, 8.881]],
-    ['F_kitchen_fridge', '廚房',   'fridge_space',       [4.065, 8.435, 4.776, 9.097]],
-    ['F_washer',         '陽台',   'washing_machine',    [0.025, 8.431, 0.798, 9.201]],
-    ['F_laundry_sink',   '陽台',   'laundry_sink',       [0.887, 8.450, 1.419, 8.870]],
-    ['F_ac_unit',        '陽台',   'ac_outdoor_unit',    [0.302, 9.684, 1.231, 10.041]],
-    ['F_DD_box',         '餐廳',   'electrical_panel',   [8.337, 6.168, 8.966, 6.784]],
+    // v5：跟著牆面移動（相對最近那道牆的距離不變）
+    ['F_tub',            '主浴廁', 'bathtub',            [0.069, 4.175, 0.700, 5.690]],
+    ['F_mbath_shower',   '主浴廁', 'shower_stall',       [0.770, 4.502, 1.687, 5.690]],
+    ['F_mbath_toilet',   '主浴廁', 'toilet',             [1.880, 4.160, 2.281, 4.885]],
+    ['F_mbath_vanity',   '主浴廁', 'vanity_counter',     [2.449, 4.164, 3.213, 4.621]],
+    ['F_mbath_shaft',    '主浴廁', 'pipe_shaft',         [0.763, 4.160, 1.696, 4.502]],
+    ['F_bath2_vanity',   '次浴廁', 'vanity_counter',     [6.173, 8.586, 6.616, 9.394]],
+    ['F_bath2_toilet',   '次浴廁', 'toilet',             [6.874, 9.653, 7.277, 10.350]],
+    ['F_bath2_shower',   '次浴廁', 'shower_stall',       [8.024, 9.116, 8.950, 10.350]],
+    ['F_bath2_duct',     '次浴廁', 'duct_shaft',         [6.135, 9.673, 6.617, 10.350]],
+    ['F_kitchen_counter','廚房',   'kitchen_counter',    [3.319, 9.874, 5.889, 10.350]],
+    ['F_kitchen_sink',   '廚房',   'sink',               [5.071, 9.883, 5.836, 10.295]],
+    ['F_kitchen_hob',    '廚房',   'cooktop_assumed',    [3.385, 9.888, 3.981, 10.282]],
+    ['F_kitchen_cabinet','廚房',   'tall_cabinet',       [3.228, 8.338, 4.005, 8.765]],
+    ['F_kitchen_fridge', '廚房',   'fridge_space',       [4.071, 8.331, 4.782, 8.993]],
+    ['F_washer',         '陽台',   'washing_machine',    [0.000, 8.357, 0.743, 9.127]],
+    ['F_laundry_sink',   '陽台',   'laundry_sink',       [0.832, 8.376, 1.364, 8.796]],
+    ['F_ac_unit',        '陽台',   'ac_outdoor_unit',    [0.247, 9.722, 1.176, 10.025]],
+    ['F_DD_box',         '餐廳',   'electrical_panel',   [8.311, 6.108, 8.940, 6.724]],
   ];
   ctx.fixtures = FX.map(([id, room, kind, spec]) => {
     const rects = R[room] ? R[room].rects : null;

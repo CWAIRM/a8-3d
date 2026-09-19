@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0e1218">
 <link rel="icon" href="data:,">
-<title>A8 戶 3D 看屋</title>
+<title>彥武天祥洗很大的家 · 3D 看屋</title>
 <style>
   :root{--sl:env(safe-area-inset-left,0px);--sr:env(safe-area-inset-right,0px);--st:env(safe-area-inset-top,0px);--sb:env(safe-area-inset-bottom,0px)}
   html,body{margin:0;height:100%;overflow:hidden;background:#11141a;
@@ -15,6 +15,7 @@
     border:1px solid rgba(255,255,255,.14);border-radius:14px;padding:14px 16px;
     font-size:13px;line-height:1.85;backdrop-filter:blur(10px);max-width:270px;z-index:10}
   #hud h1{margin:0 0 8px;font-size:15px;letter-spacing:.5px;display:flex;align-items:center;gap:10px;justify-content:space-between}
+  #hud h1 .nm>span{display:inline-block}   /* 屋主名字太長時在「彥武天祥／洗很大的家」之間換行，不要把「家」單獨擠到第二行 */
   #hudfold{background:#223044;border:1px solid #3d4b5f;color:#cfe0f5;border-radius:7px;font:inherit;font-size:11px;
     font-weight:500;letter-spacing:0;padding:1px 8px;cursor:pointer;white-space:nowrap}
   #hudfold:hover{background:#2c3a4e}
@@ -87,7 +88,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div id="loading"><div id="loadmsg">🏠 正在把你家蓋起來…</div><div class="track"><div id="loadbar"></div></div><div id="loadsub">正在下載 3D 程式</div></div>
+<div id="loading"><div id="loadmsg">🏠 正在把彥武天祥洗很大的家蓋起來…</div><div class="track"><div id="loadbar"></div></div><div id="loadsub">正在下載 3D 程式</div></div>
 <script>
 /* 開不起來時不要讓人對著載入畫面一直等：程式檔下載失敗、瀏覽器太舊、沒有 WebGL2、啟動途中出錯 → 換成一句白話說明 */
 (function(){
@@ -122,8 +123,8 @@
 <div id="labels"></div>
 
 <div id="hud">
-  <h1><span>A8 戶 · 3D 看屋</span><button id="hudfold" type="button">收起 ▴</button></h1>
-  <div class="dim fold">室內 27 坪（89.3 ㎡）＋工作陽台 1.8 坪<br>樓高 3.25 m ・ 三房兩廳兩衛<br>各房間標的是牆內淨面積（27 坪含牆、柱）</div>
+  <h1><span class="nm"><span>彥武天祥</span><span>洗很大的家</span></span><button id="hudfold" type="button">收起 ▴</button></h1>
+  <div class="dim fold"><b style="color:#cfd9e6;font-weight:500">A8 戶 · 3D 看屋</b><br>室內 27 坪（89.3 ㎡）＋工作陽台 1.8 坪<br>樓高 3.25 m ・ 三房兩廳兩衛<br>各房間標的是牆內淨面積（27 坪含牆、柱）</div>
   <hr class="fold" style="border:0;border-top:1px solid #2b3545;margin:10px 0">
   <div id="hint" class="fold"></div>
   <div id="todbox" title="拉一下，看一整天的光線"><span>🌤</span><input id="tod" type="range" min="5" max="23.5" step="0.25" value="14"><b id="todv">14:00</b></div>
@@ -134,6 +135,7 @@
   <button id="m-bird" type="button">🏠 俯瞰全屋</button>
   <button id="m-roof" type="button">🔲 屋頂：開</button>
   <button id="m-photo" type="button" style="display:none">📸 拍照級畫面</button>
+  <button id="m-sound" type="button">🔇 聲音：關</button>
 </div>
 
 <div id="jump">
@@ -142,11 +144,11 @@
 </div>
 
 <div id="room">客廳<small>站在這裡</small></div>
-<div id="note">依建商平面圖重建 · 比例依「室內 27 坪」推算，樓高 3.25 m<br>家具為示意 · 非施工圖，實際尺寸以建商圖說為準</div>
+<div id="note">依建商平面圖重建 · 尺寸依建商圖標註（公分），樓高 3.25 m<br>家具為示意 · 非施工圖，實際尺寸以建商圖說為準</div>
 <div id="toast"></div>
 
 <div id="start"><div class="box">
-  <h2>🏠 準備進入你家</h2>
+  <h2>🏠 準備進入彥武天祥洗很大的家</h2>
   <p>點一下畫面 → 滑鼠會被鎖住，就可以像玩遊戲一樣在屋子裡走動。</p>
   <p>想退出來，按鍵盤左上角的 <b>Esc</b>。</p>
   <p style="color:#6b7a8d">不想走路的話，右上角有「俯瞰全屋」可以直接看格局。</p>
@@ -156,6 +158,6 @@
 <script type="importmap">
 {"imports":{"three":"./lib/three.module.js","three/addons/":"./lib/","three-mesh-bvh":"./lib/pathtracer/three-mesh-bvh.module.js"}}
 </script>
-<script type="module" src="./js/main.js?v=20260919c" onerror="window.__a8fail && window.__a8fail('程式檔案下載失敗')"></script>
+<script type="module" src="./js/main.js?v=20260919v5" onerror="window.__a8fail && window.__a8fail('程式檔案下載失敗')"></script>
 </body>
 </html>
