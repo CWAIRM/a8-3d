@@ -106,7 +106,9 @@
   }catch(e){ fail('WebGL2'); }
   if(window.HTMLScriptElement && HTMLScriptElement.supports && !HTMLScriptElement.supports('importmap')) fail('瀏覽器版本太舊');
   // 只管這個網站自己的程式出錯（瀏覽器外掛的錯誤不算）；模組啟動途中丟出的錯誤（含 await 失敗）都會走這裡
-  addEventListener('error', function(e){ if(!window.__ready && e && e.message && (!e.filename || e.filename.indexOf(location.origin) === 0)) fail(e.message); });
+  addEventListener('error', function(e){ if(!window.__ready && e && e.message && (!e.filename || e.filename.indexOf(location.origin) === 0 || e.filename.indexOf('cdn.jsdelivr.net') >= 0)) fail(e.message); });
+  // 啟動途中沒人接的 Promise 錯誤（例如某支程式在手機上缺功能）也要顯示出來，不能讓人對著載入畫面等
+  addEventListener('unhandledrejection', function(e){ if(!window.__ready){ var r = e && e.reason; fail((r && (r.message || String(r))) || '啟動失敗'); } });
   setTimeout(function(){ if(!window.__ready && !done){ var s = document.getElementById('loadsub'); if(s) s.textContent = '網路比較慢，還在下載中…'; } }, 25000);
   setTimeout(function(){ if(!window.__ready && !done){ var s = document.getElementById('loadsub'); if(s) s.innerHTML = '等了很久都沒好的話，請重新整理頁面'; } }, 90000);
 })();

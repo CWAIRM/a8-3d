@@ -100,6 +100,10 @@ function updateLabels(){
    控制
    ============================================================ */
 const pl = new PointerLockControls(camera, renderer.domElement);
+// ⚠️ iPhone／iPad 的 Safari（含 LINE 內建瀏覽器）沒有「鎖住滑鼠」功能：document.exitPointerLock 不存在，
+//    直接呼叫 pl.unlock() 會丟錯、整個網頁卡在載入畫面（2026-09-19 Andy 的朋友實際遇到）→ 一律走這個安全版
+const CAN_LOCK = typeof document.exitPointerLock === 'function' && typeof renderer.domElement.requestPointerLock === 'function';
+function unlockPointer(){ if(CAN_LOCK && pl.isLocked){ try{ pl.unlock(); }catch(e){} } }
 scene.add(pl.object);
 // 滑鼠鎖不能用（例如被嵌在不允許鎖滑鼠的框框裡）時，我們自己改成「按住拖曳轉頭」→ 不要 three 那行紅字錯誤
 renderer.domElement.ownerDocument.removeEventListener('pointerlockerror', pl._onPointerlockError);
@@ -389,7 +393,7 @@ function setMode(m){
     startEl.style.display='flex';
     stickEl.style.display='none'; stickReset();
   }else{
-    pl.unlock(); crossEl.style.display='none'; startEl.style.display='none';
+    unlockPointer(); crossEl.style.display='none'; startEl.style.display='none';
     stickEl.style.display='none'; stickReset();
     scene.fog.near=60;
     setFov(BIRD_FOV);
@@ -416,7 +420,7 @@ applyTime();
 const photoBtn=$('m-photo');
 if(photo.available){
   photoBtn.style.display='';
-  photoBtn.onclick=()=>{ foldHudOnce(); if(photo.active) photo.exit(); else { pl.unlock(); photo.enter(); } photoBtn.classList.toggle('on', photo.active); };
+  photoBtn.onclick=()=>{ foldHudOnce(); if(photo.active) photo.exit(); else { unlockPointer(); photo.enter(); } photoBtn.classList.toggle('on', photo.active); };
 }
 
 /* ---------- 快速傳送（手機預設收成一顆小按鈕，點開才展開清單） ---------- */
