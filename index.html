@@ -92,11 +92,14 @@
 /* 開不起來時不要讓人對著載入畫面一直等：程式檔下載失敗、瀏覽器太舊、沒有 WebGL2、啟動途中出錯 → 換成一句白話說明 */
 (function(){
   var done = false;
-  function fail(why){
+  // iPhone／iPad 上所有瀏覽器（Safari、LINE、Chrome）都是同一個核心，換瀏覽器沒用，要更新 iOS
+  var IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  function fail(why, tip){
     if(window.__ready || done) return; done = true;
     var l = document.getElementById('loading'); if(!l) return;
     l.innerHTML = '<div style="font-size:16px;color:#e6edf6">😥 3D 看屋沒有順利打開</div>' +
-      '<div style="font-size:13px;color:#9fb0c4;line-height:1.9;max-width:380px">先重新整理一次（多半是網路一時不穩）；<br>還是不行的話，請改用最新版的 Chrome、Safari 或 Edge。</div>' +
+      '<div style="font-size:13px;color:#9fb0c4;line-height:1.9;max-width:380px">' + (tip || '先重新整理一次（多半是網路一時不穩）；<br>' +
+        (IOS ? '還是不行的話，請把 iPhone 更新到最新 iOS（設定 → 一般 → 軟體更新）。' : '還是不行的話，請改用最新版的 Chrome、Safari 或 Edge。')) + '</div>' +
       (why ? '<div style="font-size:11px;color:#56647a;max-width:340px;word-break:break-all">（' + String(why).slice(0, 160).replace(/[<>&]/g, '') + '）</div>' : '');
   }
   window.__a8fail = fail;
@@ -104,7 +107,9 @@
     var cv = document.createElement('canvas');
     if(!(cv.getContext('webgl2'))) fail('這個瀏覽器沒有開啟 WebGL2');
   }catch(e){ fail('WebGL2'); }
-  if(window.HTMLScriptElement && HTMLScriptElement.supports && !HTMLScriptElement.supports('importmap')) fail('瀏覽器版本太舊');
+  if(!(window.HTMLScriptElement && HTMLScriptElement.supports && HTMLScriptElement.supports('importmap')))
+    fail(IOS ? '這支 iPhone 的系統版本太舊' : '瀏覽器版本太舊',
+         IOS ? '這個 3D 網頁需要 <b>iOS 16.4 以上</b>。<br>請到「設定 → 一般 → 軟體更新」更新後再打開。' : '請改用最新版的 Chrome、Safari 或 Edge 打開。');
   // 只管這個網站自己的程式出錯（瀏覽器外掛的錯誤不算）；模組啟動途中丟出的錯誤（含 await 失敗）都會走這裡
   addEventListener('error', function(e){ if(!window.__ready && e && e.message && (!e.filename || e.filename.indexOf(location.origin) === 0 || e.filename.indexOf('cdn.jsdelivr.net') >= 0)) fail(e.message); });
   // 啟動途中沒人接的 Promise 錯誤（例如某支程式在手機上缺功能）也要顯示出來，不能讓人對著載入畫面等
@@ -151,6 +156,6 @@
 <script type="importmap">
 {"imports":{"three":"./lib/three.module.js","three/addons/":"./lib/","three-mesh-bvh":"./lib/pathtracer/three-mesh-bvh.module.js"}}
 </script>
-<script type="module" src="./js/main.js" onerror="window.__a8fail && window.__a8fail('程式檔案下載失敗')"></script>
+<script type="module" src="./js/main.js?v=20260919c" onerror="window.__a8fail && window.__a8fail('程式檔案下載失敗')"></script>
 </body>
 </html>
