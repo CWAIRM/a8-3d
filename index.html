@@ -4,85 +4,139 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0e1218">
-<title>A8 戶 3D 看屋 — 27坪 三房兩廳</title>
+<link rel="icon" href="data:,">
+<title>A8 戶 3D 看屋</title>
 <style>
+  :root{--sl:env(safe-area-inset-left,0px);--sr:env(safe-area-inset-right,0px);--st:env(safe-area-inset-top,0px);--sb:env(safe-area-inset-bottom,0px)}
   html,body{margin:0;height:100%;overflow:hidden;background:#11141a;
     font-family:"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;color:#fff}
   #app{position:fixed;inset:0}
-  #hud{position:fixed;left:16px;top:16px;background:rgba(14,18,26,.82);
+  #hud{position:fixed;left:calc(16px + var(--sl));top:calc(16px + var(--st));background:rgba(14,18,26,.82);
     border:1px solid rgba(255,255,255,.14);border-radius:14px;padding:14px 16px;
     font-size:13px;line-height:1.85;backdrop-filter:blur(10px);max-width:270px;z-index:10}
-  #hud h1{margin:0 0 8px;font-size:15px;letter-spacing:.5px}
+  #hud h1{margin:0 0 8px;font-size:15px;letter-spacing:.5px;display:flex;align-items:center;gap:10px;justify-content:space-between}
+  #hudfold{background:#223044;border:1px solid #3d4b5f;color:#cfe0f5;border-radius:7px;font:inherit;font-size:11px;
+    font-weight:500;letter-spacing:0;padding:1px 8px;cursor:pointer;white-space:nowrap}
+  #hudfold:hover{background:#2c3a4e}
+  #hud.folded .fold{display:none}
+  #hud.folded h1{margin-bottom:2px}
   #hud .k{display:inline-block;background:#2a3444;border:1px solid #3d4b5f;border-radius:5px;
     padding:1px 7px;margin-right:4px;font-size:11px;font-weight:600}
   #hud .dim{color:#93a3b8;font-size:11.5px}
-  #room{position:fixed;left:50%;bottom:34px;transform:translateX(-50%);
+  #room{position:fixed;left:50%;bottom:calc(34px + var(--sb));transform:translateX(-50%);
     background:rgba(14,18,26,.85);border:1px solid rgba(255,255,255,.14);
-    border-radius:999px;padding:9px 26px;font-size:16px;font-weight:600;letter-spacing:2px;z-index:10}
+    border-radius:999px;padding:9px 26px;font-size:16px;font-weight:600;letter-spacing:2px;z-index:10;white-space:nowrap}
   #room small{display:block;font-size:11px;font-weight:400;color:#93a3b8;letter-spacing:.5px;text-align:center}
   #start{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
-    background:rgba(8,10,14,.45);z-index:50;cursor:pointer;flex-direction:column;gap:14px}
+    background:rgba(8,10,14,.45);z-index:9;cursor:pointer;flex-direction:column;gap:14px}
   #start .box{background:#161c26;border:1px solid #2c3746;border-radius:18px;
-    padding:34px 46px;text-align:center;max-width:420px}
+    padding:34px 46px;text-align:center;max-width:420px;margin:0 16px}
   #start h2{margin:0 0 10px;font-size:22px}
   #start p{margin:6px 0;color:#9fb0c4;font-size:13.5px;line-height:1.8}
   #start .go{margin-top:18px;background:#3b82f6;border-radius:10px;padding:12px 30px;
     font-weight:700;font-size:15px;display:inline-block}
-  #modes{position:fixed;right:16px;top:16px;display:flex;flex-direction:column;gap:8px;z-index:10}
+  #modes{position:fixed;right:calc(16px + var(--sr));top:calc(16px + var(--st));display:flex;flex-direction:column;gap:8px;z-index:10}
   #modes button{background:rgba(14,18,26,.85);color:#fff;border:1px solid rgba(255,255,255,.16);
     border-radius:10px;padding:9px 15px;font-size:13px;cursor:pointer;font-family:inherit;
     transition:.15s;min-width:132px;text-align:left}
   #modes button:hover{background:#243044;border-color:#4b5f7a}
   #modes button.on{background:#3b82f6;border-color:#60a5fa}
-  #jump{position:fixed;right:16px;top:150px;background:rgba(14,18,26,.85);
-    border:1px solid rgba(255,255,255,.14);border-radius:12px;padding:10px;z-index:10;width:132px}
-  #jump div{font-size:11px;color:#93a3b8;margin-bottom:6px;letter-spacing:1px}
-  #jump button{display:block;width:100%;background:#1d2532;color:#dbe6f3;border:1px solid #2f3b4d;
+  #modes button:disabled{opacity:.4;cursor:default;background:rgba(14,18,26,.85);border-color:rgba(255,255,255,.16)}
+  #jump{position:fixed;right:calc(16px + var(--sr));top:150px;background:rgba(14,18,26,.85);
+    border:1px solid rgba(255,255,255,.14);border-radius:12px;padding:10px;z-index:10;width:132px;box-sizing:border-box;
+    overflow-y:auto;overscroll-behavior:contain}
+  #jump .jh{display:block;width:100%;background:none;border:0;padding:0 0 6px;margin:0;font:inherit;font-size:11px;color:#93a3b8;
+    letter-spacing:1px;text-align:left;cursor:pointer}
+  #jump.closed .jh{padding:0}
+  #jump.closed .jl{display:none}
+  #jump .jl button{display:block;width:100%;background:#1d2532;color:#dbe6f3;border:1px solid #2f3b4d;
     border-radius:7px;padding:6px 8px;margin-bottom:5px;font-size:12.5px;cursor:pointer;
     font-family:inherit;text-align:left}
-  #jump button:hover{background:#2c3a4e}
-  #note{position:fixed;left:16px;bottom:16px;font-size:11px;color:#6b7a8d;z-index:10;line-height:1.7}
+  #jump .jl button:hover{background:#2c3a4e}
+  #note{position:fixed;left:calc(16px + var(--sl));bottom:calc(16px + var(--sb));font-size:11px;color:#6b7a8d;z-index:10;line-height:1.7}
   .cross{position:fixed;left:50%;top:50%;width:6px;height:6px;margin:-3px 0 0 -3px;
     border-radius:50%;background:rgba(255,255,255,.5);z-index:5;pointer-events:none}
+  #stick{position:fixed;left:calc(20px + var(--sl));bottom:calc(90px + var(--sb));width:124px;height:124px;border-radius:50%;
+    background:rgba(18,24,34,.5);border:1px solid rgba(255,255,255,.2);z-index:20;display:none;touch-action:none}
+  #knob{position:absolute;left:38px;top:38px;width:48px;height:48px;border-radius:50%;
+    background:rgba(120,165,225,.9);pointer-events:none}
+  #todbox{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12px}
+  #hud.folded #todbox{margin-top:4px}
+  #todbox input{flex:1;min-width:0;accent-color:#f2b35b;cursor:pointer}
+  #todbox b{font-variant-numeric:tabular-nums;min-width:40px;text-align:right;color:#f6d7a8}
+  #labels{position:fixed;inset:0;pointer-events:none;z-index:4;overflow:hidden}
+  #labels .lb{position:absolute;left:0;top:0;display:none;white-space:nowrap;text-align:center;
+    background:rgba(250,247,241,.84);color:#3b342d;border-radius:999px;padding:3px 11px 4px;
+    box-shadow:0 1px 3px rgba(40,30,20,.18);will-change:transform}
+  #labels .lb b{display:block;font-size:14px;font-weight:600;letter-spacing:1px;line-height:1.3}
+  #labels .lb small{display:block;font-size:11px;color:#76695b;line-height:1.25;font-variant-numeric:tabular-nums}
+  #toast{position:fixed;left:50%;top:calc(18px + var(--st));transform:translateX(-50%);z-index:40;display:none;
+    background:rgba(14,18,26,.9);border:1px solid rgba(255,255,255,.16);border-radius:10px;padding:8px 16px;font-size:13px}
+  #loading{position:fixed;inset:0;z-index:100;background:#0b0e13;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:14px;color:#9fb0c4;font-size:14px;letter-spacing:1px;text-align:center;padding:0 24px}
+  #loading .track{width:220px;height:4px;border-radius:2px;background:#1e2633;overflow:hidden}
+  #loadbar{height:100%;width:0;background:#f2b35b;transition:width .2s}
+  #loadsub{font-size:12px;color:#6b7a8d;letter-spacing:.5px;min-height:1.2em;line-height:1.7}
+  @media (max-width:760px){#hud{max-width:190px;font-size:11px;padding:11px 13px}
+    #hud h1{font-size:14px}#modes button{min-width:104px;font-size:12px;padding:8px 11px}
+    #jump{width:104px;top:auto;bottom:calc(14px + var(--sb))}#jump .jl button{font-size:11.5px;padding:5px 7px}
+    #labels .lb{padding:2px 9px 3px}#labels .lb b{font-size:12.5px}#labels .lb small{font-size:10px}
+    #note{display:none}}
+  @media (max-width:400px){#room{bottom:calc(66px + var(--sb))}}   /* 很窄的手機：房間名稱往上移，不壓到右下角的「傳送」鈕 */
 </style>
 </head>
 <body>
 <div id="app"></div>
+<div id="loading"><div id="loadmsg">🏠 正在把你家蓋起來…</div><div class="track"><div id="loadbar"></div></div><div id="loadsub">正在下載 3D 程式</div></div>
+<script>
+/* 開不起來時不要讓人對著載入畫面一直等：程式檔下載失敗、瀏覽器太舊、沒有 WebGL2、啟動途中出錯 → 換成一句白話說明 */
+(function(){
+  var done = false;
+  function fail(why){
+    if(window.__ready || done) return; done = true;
+    var l = document.getElementById('loading'); if(!l) return;
+    l.innerHTML = '<div style="font-size:16px;color:#e6edf6">😥 3D 看屋沒有順利打開</div>' +
+      '<div style="font-size:13px;color:#9fb0c4;line-height:1.9;max-width:380px">先重新整理一次（多半是網路一時不穩）；<br>還是不行的話，請改用最新版的 Chrome、Safari 或 Edge。</div>' +
+      (why ? '<div style="font-size:11px;color:#56647a;max-width:340px;word-break:break-all">（' + String(why).slice(0, 160).replace(/[<>&]/g, '') + '）</div>' : '');
+  }
+  window.__a8fail = fail;
+  try{
+    var cv = document.createElement('canvas');
+    if(!(cv.getContext('webgl2'))) fail('這個瀏覽器沒有開啟 WebGL2');
+  }catch(e){ fail('WebGL2'); }
+  if(window.HTMLScriptElement && HTMLScriptElement.supports && !HTMLScriptElement.supports('importmap')) fail('瀏覽器版本太舊');
+  // 只管這個網站自己的程式出錯（瀏覽器外掛的錯誤不算）；模組啟動途中丟出的錯誤（含 await 失敗）都會走這裡
+  addEventListener('error', function(e){ if(!window.__ready && e && e.message && (!e.filename || e.filename.indexOf(location.origin) === 0)) fail(e.message); });
+  setTimeout(function(){ if(!window.__ready && !done){ var s = document.getElementById('loadsub'); if(s) s.textContent = '網路比較慢，還在下載中…'; } }, 25000);
+  setTimeout(function(){ if(!window.__ready && !done){ var s = document.getElementById('loadsub'); if(s) s.innerHTML = '等了很久都沒好的話，請重新整理頁面'; } }, 90000);
+})();
+</script>
 <div class="cross" id="cross" style="display:none"></div>
+<div id="labels"></div>
 
 <div id="hud">
-  <h1>A8 戶 · 3D 看屋</h1>
-  <div class="dim">室內 27 坪（89.3 ㎡）＋工作陽台 1.8 坪<br>樓高 3.25 m ・ 三房兩廳兩衛</div>
-  <hr style="border:0;border-top:1px solid #2b3545;margin:10px 0">
-  <div id="hint">
-    <span class="k">W A S D</span>走動<br>
-    <span class="k">滑鼠</span>轉頭看<br>
-    <span class="k">Shift</span>快走　<span class="k">空白</span>站高看<br>
-    <span class="k">Esc</span>放開滑鼠
-  </div>
+  <h1><span>A8 戶 · 3D 看屋</span><button id="hudfold" type="button">收起 ▴</button></h1>
+  <div class="dim fold">室內 27 坪（89.3 ㎡）＋工作陽台 1.8 坪<br>樓高 3.25 m ・ 三房兩廳兩衛<br>各房間標的是牆內淨面積（27 坪含牆、柱）</div>
+  <hr class="fold" style="border:0;border-top:1px solid #2b3545;margin:10px 0">
+  <div id="hint" class="fold"></div>
+  <div id="todbox" title="拉一下，看一整天的光線"><span>🌤</span><input id="tod" type="range" min="5" max="23.5" step="0.25" value="14"><b id="todv">14:00</b></div>
 </div>
 
 <div id="modes">
-  <button id="m-walk" class="on">🚶 走進去看</button>
-  <button id="m-bird">🏠 俯瞰全屋</button>
-  <button id="m-roof">🔲 屋頂開關</button>
-  <button id="m-day">🌤 白天 / 夜晚</button>
+  <button id="m-walk" class="on" type="button">🚶 走進去看</button>
+  <button id="m-bird" type="button">🏠 俯瞰全屋</button>
+  <button id="m-roof" type="button">🔲 屋頂：開</button>
+  <button id="m-photo" type="button" style="display:none">📸 拍照級畫面</button>
 </div>
 
 <div id="jump">
-  <div>快速傳送</div>
-  <button data-go="客廳">客廳</button>
-  <button data-go="餐廳">餐廳</button>
-  <button data-go="主臥室">主臥室</button>
-  <button data-go="臥室二">臥室二</button>
-  <button data-go="臥室三">臥室三</button>
-  <button data-go="主浴廁">主浴廁</button>
-  <button data-go="廚房">廚房</button>
-  <button data-go="工作陽台">工作陽台</button>
+  <button class="jh" type="button">📍 快速傳送</button>
+  <div class="jl"></div>
 </div>
 
 <div id="room">客廳<small>站在這裡</small></div>
-<div id="note">比例重建模型 · 依「客廳窗 336.5cm ／ 室內 27 坪 ／ 樓高 3.25m」推算<br>非施工圖，實際尺寸以建商圖說為準</div>
+<div id="note">依建商平面圖重建 · 比例依「室內 27 坪」推算，樓高 3.25 m<br>家具為示意 · 非施工圖，實際尺寸以建商圖說為準</div>
+<div id="toast"></div>
 
 <div id="start"><div class="box">
   <h2>🏠 準備進入你家</h2>
@@ -93,648 +147,8 @@
 </div></div>
 
 <script type="importmap">
-{"imports":{"three":"./lib/three.module.js","three/addons/":"./lib/"}}
+{"imports":{"three":"./lib/three.module.js","three/addons/":"./lib/","three-mesh-bvh":"./lib/pathtracer/three-mesh-bvh.module.js"}}
 </script>
-<script type="module">
-import * as THREE from 'three';
-import { PointerLockControls } from './lib/PointerLockControls.js';
-import { OrbitControls } from './lib/OrbitControls.js';
-import { RoomEnvironment } from './lib/environments/RoomEnvironment.js';
-
-/* ============================================================
-   尺寸來源（Andy 提供 + 平面圖比例反推）
-   室內 27 坪 = 89.26 ㎡ ／ 工作陽台 1.8 坪 = 5.95 ㎡
-   客廳採光窗 336.5 cm ／ 樓高 H = 3.25 m
-   座標：X 向東（平面圖右）、Z 向南（平面圖下）、Y 向上
-   ============================================================ */
-const H  = 3.25;            // 樓高
-const TW = 0.25;            // 外牆厚
-const IW = 0.12;            // 隔間牆厚
-const W  = 9.45, D = 10.75; // 全屋外圍
-
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x0e1218);
-scene.fog = new THREE.Fog(0x0e1218, 30, 70);
-
-const camera = new THREE.PerspectiveCamera(72, innerWidth/innerHeight, 0.05, 250);
-const renderer = new THREE.WebGLRenderer({antialias:true});
-renderer.setPixelRatio(Math.min(devicePixelRatio,2));
-renderer.setSize(innerWidth,innerHeight);
-renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.05;
-document.getElementById('app').appendChild(renderer.domElement);
-
-/* ---------- 環境光照（IBL）：讓材質有真實的反射與漫射 ---------- */
-const pmrem = new THREE.PMREMGenerator(renderer);
-pmrem.compileEquirectangularShader();
-const envRT = pmrem.fromScene(new RoomEnvironment(), 0.035);
-scene.environment = envRT.texture;
-scene.environmentIntensity = 0.85;
-
-/* ---------- 真實材質貼圖（Poly Haven, CC0 可商用） ---------- */
-const ANISO = Math.min(8, renderer.capabilities.getMaxAnisotropy());
-const TL = new THREE.TextureLoader();
-function tx(f, srgb){
-  const t = TL.load('./lib/tex/'+f);
-  t.wrapS = t.wrapT = THREE.RepeatWrapping;
-  t.anisotropy = ANISO;
-  if(srgb) t.colorSpace = THREE.SRGBColorSpace;
-  return t;
-}
-const TEX = {};
-for(const k of ['wood','tile','wall'])
-  TEX[k] = {d:tx(k+'_Diffuse.jpg',true), n:tx(k+'_nor_gl.jpg'), a:tx(k+'_arm.jpg')};
-// 一張貼圖對應幾公尺（越小＝紋理越密）
-const TSCALE = {wood:1.55, tile:1.15, wall:2.10};
-const pbrCache = new Map();
-/** 依實際尺寸產生不變形的 PBR 材質；u 對應 w、v 對應 h（單位：公尺） */
-function pbr(kind, w, h, extra){
-  const s = TSCALE[kind];
-  const rx = Math.max(.25,+(w/s).toFixed(2)), ry = Math.max(.25,+(h/s).toFixed(2));
-  const key = kind+'|'+rx+'|'+ry+'|'+(extra?JSON.stringify(extra):'');
-  if(pbrCache.has(key)) return pbrCache.get(key);
-  const t = TEX[kind];
-  const c = o=>{ const n=o.clone(); n.repeat.set(rx,ry); return n; };
-  const base = {
-    map:c(t.d), normalMap:c(t.n),
-    aoMap:c(t.a), roughnessMap:c(t.a), metalnessMap:c(t.a),
-    roughness:1, metalness:1,
-  };
-  if(kind==='wall'){          // 室內油漆牆：只要細微凹凸，不要水泥髒污花紋
-    delete base.map;
-    base.normalScale = new THREE.Vector2(.28,.28);
-    base.roughness = .93;
-    delete base.roughnessMap;
-    base.metalness = 0;
-    delete base.metalnessMap;
-  }
-  const m = new THREE.MeshStandardMaterial(Object.assign(base, extra||{}));
-  pbrCache.set(key, m);
-  return m;
-}
-
-/* ---------- 材質 ---------- */
-const M = {
-  wall  : new THREE.MeshStandardMaterial({color:0xf2efe9, roughness:.95}),
-  wallO : new THREE.MeshStandardMaterial({color:0xe6e1d8, roughness:.95}),
-  woodF : new THREE.MeshStandardMaterial({color:0xb08453, roughness:.72}),
-  tileF : new THREE.MeshStandardMaterial({color:0xd9d5cd, roughness:.42, metalness:.02}),
-  wetF  : new THREE.MeshStandardMaterial({color:0xb9bcbb, roughness:.35}),
-  balcF : new THREE.MeshStandardMaterial({color:0x9c9a96, roughness:.9}),
-  glass : new THREE.MeshPhysicalMaterial({color:0xbfe0f5, transparent:true, opacity:.20,
-           roughness:.03, metalness:0, transmission:.85, side:THREE.DoubleSide}),
-  frame : new THREE.MeshStandardMaterial({color:0x3a3f45, roughness:.5, metalness:.5}),
-  wood  : new THREE.MeshStandardMaterial({color:0x8a6240, roughness:.6}),
-  woodD : new THREE.MeshStandardMaterial({color:0x5d4230, roughness:.6}),
-  fab   : new THREE.MeshStandardMaterial({color:0x6f7f93, roughness:.92}),
-  fabL  : new THREE.MeshStandardMaterial({color:0xe8e2d6, roughness:.95}),
-  white : new THREE.MeshStandardMaterial({color:0xfbfbfa, roughness:.35}),
-  metal : new THREE.MeshStandardMaterial({color:0xb9c0c7, roughness:.28, metalness:.85}),
-  dark  : new THREE.MeshStandardMaterial({color:0x22262b, roughness:.45}),
-  stone : new THREE.MeshStandardMaterial({color:0x33383f, roughness:.35}),
-  green : new THREE.MeshStandardMaterial({color:0x4a7c52, roughness:.85}),
-};
-// 標記哪些材質要換成真實貼圖（色調用 extra.color 保留原本配色）
-M.wall.kind  = 'wall';  M.wall.tint  = 0xf2efe9;
-M.wallO.kind = 'wall';  M.wallO.tint = 0xe6e1d8;
-M.woodF.kind = 'wood';  M.woodF.tint = 0xc59a68;
-M.tileF.kind = 'tile';  M.tileF.tint = 0xe2ded6;
-M.wetF.kind  = 'tile';  M.wetF.tint  = 0xbfc4c6;
-M.balcF.kind = 'tile';  M.balcF.tint = 0xa3a19c;
-/** 有 kind 的話換成同尺寸的真實貼圖材質 */
-function skin(mat, w, h){
-  return mat && mat.kind ? pbr(mat.kind, w, h, {color:mat.tint}) : mat;
-}
-
-/* ---------- 幾何小工具 ---------- */
-const colliders = [];  // 碰撞用 AABB
-function box(w,h,d,mat,x,y,z,solid=true,rotY=0){
-  const m = new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);
-  m.position.set(x,y,z); m.rotation.y = rotY;
-  m.castShadow = true; m.receiveShadow = true;
-  scene.add(m);
-  if(solid && rotY===0) colliders.push({x0:x-w/2,x1:x+w/2,z0:z-d/2,z1:z+d/2,y1:y+h/2});
-  return m;
-}
-
-/**
- * 造一道牆，可留門洞 / 窗洞
- * a,b = 沿軸起訖；fixed = 另一軸座標；axis='x' 表示牆沿 X 延伸
- * holes = [{at,w,y0,y1,glass}]  at=洞中心沿軸座標
- */
-function wall(axis, a, b, fixed, t, holes=[], mat=M.wall){
-  holes = [...holes].sort((p,q)=>p.at-q.at);
-  let cur = a;
-  const seg = (s,e,y0,y1,solid=true)=>{
-    if(e-s < 0.001 || y1-y0 < 0.001) return;
-    const L = e-s, cy = (y0+y1)/2, hh = y1-y0, c = (s+e)/2;
-    const mm = skin(mat, L, hh);
-    if(axis==='x') box(L,hh,t,mm,c,cy,fixed,solid);
-    else           box(t,hh,L,mm,fixed,cy,c,solid);
-  };
-  for(const h of holes){
-    const s = h.at - h.w/2, e = h.at + h.w/2;
-    seg(cur, s, 0, H);                       // 洞左邊的實牆
-    if(h.y0 > 0.001) seg(s, e, 0, h.y0);     // 洞下方矮牆（窗台）
-    if(h.y1 < H-0.001) seg(s, e, h.y1, H);   // 洞上方過樑
-    if(h.glass){                             // 玻璃
-      const gh = h.y1-h.y0, gy = (h.y0+h.y1)/2;
-      if(axis==='x'){
-        box(h.w-0.06,gh,0.03,M.glass,h.at,gy,fixed,false);
-        box(h.w,0.05,t*1.05,M.frame,h.at,h.y0,fixed,false);
-        box(h.w,0.05,t*1.05,M.frame,h.at,h.y1,fixed,false);
-      }else{
-        box(0.03,gh,h.w-0.06,M.glass,fixed,gy,h.at,false);
-        box(t*1.05,0.05,h.w,M.frame,fixed,h.y0,h.at,false);
-        box(t*1.05,0.05,h.w,M.frame,fixed,h.y1,h.at,false);
-      }
-    }
-    cur = e;
-  }
-  seg(cur, b, 0, H);
-}
-
-function floorSlab(x0,z0,x1,z1,mat,y=0.02){
-  const g = new THREE.Mesh(new THREE.BoxGeometry(x1-x0,0.04,z1-z0),skin(mat,x1-x0,z1-z0));
-  g.position.set((x0+x1)/2,y,(z0+z1)/2); g.receiveShadow = true; scene.add(g);
-}
-
-/* ============================================================
-   房間表（公尺）— 依平面圖比例重建
-   ============================================================ */
-const R = {
-  '主臥室' : {x0:0.13, z0:0.13, x1:3.55, z1:3.30, f:M.woodF, area:10.8},
-  '臥室二' : {x0:3.67, z0:0.13, x1:6.05, z1:2.95, f:M.woodF, area:6.7},
-  '客廳'   : {x0:6.17, z0:0.13, x1:9.32, z1:4.25, f:M.woodF, area:13.0},
-  '餐廳'   : {x0:6.17, z0:4.25, x1:9.32, z1:7.05, f:M.woodF, area:8.8},
-  '主浴廁' : {x0:0.40, z0:3.50, x1:3.90, z1:5.78, f:M.wetF,  area:8.0},
-  '臥室三' : {x0:0.40, z0:5.95, x1:4.45, z1:8.08, f:M.woodF, area:8.6},
-  '走廊'   : {x0:4.45, z0:3.30, x1:6.05, z1:8.08, f:M.woodF, area:7.6},
-  '廚房'   : {x0:3.30, z0:8.35, x1:6.40, z1:10.45,f:M.tileF, area:6.5},
-  '次浴廁' : {x0:6.60, z0:8.35, x1:8.80, z1:10.35,f:M.wetF,  area:4.4},
-  '工作陽台':{x0:0.13, z0:8.35, x1:3.10, z1:10.30,f:M.balcF, area:5.8},
-};
-
-/* ---------- 地板 ---------- */
-floorSlab(0,0,W,D,new THREE.MeshStandardMaterial({color:0xcfc7ba,roughness:.9}),0.0);
-for(const k in R){ const r=R[k]; floorSlab(r.x0,r.z0,r.x1,r.z1,r.f,0.025); }
-// 走道／玄關補地板
-floorSlab(0.13,3.30,4.45,3.50,M.woodF,0.025);
-floorSlab(0.13,5.78,4.45,5.95,M.woodF,0.025);
-floorSlab(0.13,8.08,9.32,8.35,M.tileF,0.025);
-floorSlab(6.17,7.05,9.32,8.35,M.woodF,0.025);
-// 天花板
-const roof = box(W,0.12,D,M.wallO,W/2,H+0.06,D/2,false);
-
-/* ============================================================
-   牆
-   ============================================================ */
-// ---- 外牆（北面整排採光窗）----
-wall('x',0,W,0.13,TW,[
-  {at:1.85, w:1.90, y0:0.95, y1:2.55, glass:true},   // 主臥窗
-  {at:4.86, w:1.60, y0:0.95, y1:2.55, glass:true},   // 臥室二窗
-  {at:7.74, w:3.365,y0:0.32, y1:2.72, glass:true},   // ★ 客廳採光窗 336.5cm（落地）
-],M.wallO);
-wall('x',0,W,D-0.13,TW,[
-  {at:1.60, w:1.70, y0:0.95, y1:2.35, glass:true},   // 陽台外窗
-  {at:7.60, w:0.70, y0:1.35, y1:2.30, glass:true},   // 次浴小窗
-],M.wallO);
-wall('z',0,D,0.13,TW,[
-  {at:6.95, w:1.40, y0:0.95, y1:2.35, glass:true},   // 臥室三西窗
-],M.wallO);
-wall('z',0,D,W-0.13,TW,[
-  {at:2.30, w:1.50, y0:0.95, y1:2.55, glass:true},   // 客廳東窗
-  {at:5.70, w:1.20, y0:0.95, y1:2.45, glass:true},   // 餐廳東窗
-],M.wallO);
-
-// ---- 室內隔間 ----
-// 主臥 / 臥室二
-wall('z',0.13,3.30,3.61,IW,[]);
-// 主臥 南牆（門）
-wall('x',0.13,3.61,3.30,IW,[{at:3.05,w:0.95,y0:2.10,y1:H}]);
-// 臥室二 南牆（門）
-wall('x',3.61,6.05,2.95,IW,[{at:5.70,w:0.95,y0:2.10,y1:H}]);
-// 客餐廳 西牆（與走廊之間，中段開放）
-wall('z',0.13,7.05,6.11,IW,[
-  {at:1.40,w:1.10,y0:2.10,y1:H},   // 客廳出入口
-  {at:5.30,w:1.60,y0:2.30,y1:H},   // 餐廳大開口
-]);
-// 主浴廁
-wall('x',0.40,3.90,3.50,IW,[{at:3.45,w:0.85,y0:2.05,y1:H}]);
-wall('x',0.40,3.90,5.78,IW,[]);
-wall('z',3.50,5.78,3.96,IW,[]);
-// 臥室三
-wall('x',0.40,4.45,5.95,IW,[]);
-wall('x',0.40,4.45,8.08,IW,[]);
-wall('z',5.95,8.08,4.51,IW,[{at:6.60,w:0.95,y0:2.10,y1:H}]);
-// 南側橫隔牆
-wall('x',0.13,9.32,8.22,IW,[
-  {at:1.60,w:0.90,y0:2.10,y1:H},  // 進工作陽台
-  {at:4.60,w:1.70,y0:2.25,y1:H},  // 進廚房（開放）
-  {at:7.60,w:0.85,y0:2.05,y1:H},  // 進次浴
-]);
-// 工作陽台 / 廚房
-wall('z',8.35,D-0.13,3.18,IW,[]);
-// 廚房 / 次浴
-wall('z',8.35,D-0.13,6.48,IW,[]);
-wall('z',8.35,10.35,8.86,IW,[]);
-wall('x',6.48,8.86,10.40,IW,[]);
-
-/* ============================================================
-   家具
-   ============================================================ */
-function bed(cx,cz,w,l,rot=0){
-  const g = new THREE.Group();
-  const base=new THREE.Mesh(new THREE.BoxGeometry(w,0.30,l),M.woodD); base.position.y=0.17;
-  const mat2=new THREE.Mesh(new THREE.BoxGeometry(w-0.08,0.26,l-0.08),M.fabL); mat2.position.y=0.45;
-  const hb=new THREE.Mesh(new THREE.BoxGeometry(w+0.12,0.95,0.10),M.fab); hb.position.set(0,0.48,-l/2-0.03);
-  [base,mat2,hb].forEach(o=>{o.castShadow=true;o.receiveShadow=true;g.add(o)});
-  for(const s of [-1,1]){
-    const p=new THREE.Mesh(new THREE.BoxGeometry(w*0.36,0.12,0.36),M.white);
-    p.position.set(s*w*0.22,0.62,-l/2+0.32); p.castShadow=true; g.add(p);
-  }
-  g.position.set(cx,0.04,cz); g.rotation.y=rot; scene.add(g);
-  colliders.push({x0:cx-w/2,x1:cx+w/2,z0:cz-l/2,z1:cz+l/2,y1:0.6});
-}
-function wardrobe(cx,cz,w,d,rot=0){
-  const g=new THREE.Group();
-  const b=new THREE.Mesh(new THREE.BoxGeometry(w,2.35,d),M.wood); b.position.y=1.18;
-  b.castShadow=true; g.add(b);
-  for(let i=0;i<Math.max(2,Math.round(w/0.55));i++){
-    const ln=new THREE.Mesh(new THREE.BoxGeometry(0.015,2.2,0.015),M.dark);
-    ln.position.set(-w/2+ (i+1)*w/Math.max(2,Math.round(w/0.55)),1.18,d/2+0.01); g.add(ln);
-  }
-  g.position.set(cx,0.04,cz); g.rotation.y=rot; scene.add(g);
-  colliders.push({x0:cx-w/2,x1:cx+w/2,z0:cz-d/2,z1:cz+d/2,y1:2.3});
-}
-function sofa(cx,cz,w,rot=0){
-  const g=new THREE.Group();
-  const s=new THREE.Mesh(new THREE.BoxGeometry(w,0.42,0.92),M.fab); s.position.y=0.30;
-  const b=new THREE.Mesh(new THREE.BoxGeometry(w,0.62,0.22),M.fab); b.position.set(0,0.55,-0.36);
-  [s,b].forEach(o=>{o.castShadow=true;g.add(o)});
-  for(const sgn of [-1,1]){
-    const a=new THREE.Mesh(new THREE.BoxGeometry(0.20,0.28,0.92),M.fab);
-    a.position.set(sgn*(w/2-0.1),0.60,0); a.castShadow=true; g.add(a);
-  }
-  g.position.set(cx,0.04,cz); g.rotation.y=rot; scene.add(g);
-  colliders.push({x0:cx-w/2,x1:cx+w/2,z0:cz-0.5,z1:cz+0.5,y1:0.8});
-}
-function table(cx,cz,w,d,h,mat=M.wood){
-  box(w,0.06,d,mat,cx,h,cz,true);
-  for(const sx of [-1,1]) for(const sz of [-1,1])
-    box(0.07,h,0.07,M.woodD,cx+sx*(w/2-0.1),h/2,cz+sz*(d/2-0.1),false);
-}
-function chair(cx,cz,rot=0){
-  const g=new THREE.Group();
-  const s=new THREE.Mesh(new THREE.BoxGeometry(0.44,0.05,0.44),M.woodD); s.position.y=0.45;
-  const b=new THREE.Mesh(new THREE.BoxGeometry(0.44,0.46,0.05),M.woodD); b.position.set(0,0.70,-0.20);
-  [s,b].forEach(o=>{o.castShadow=true;g.add(o)});
-  for(const sx of [-1,1]) for(const sz of [-1,1]){
-    const l=new THREE.Mesh(new THREE.BoxGeometry(0.045,0.45,0.045),M.woodD);
-    l.position.set(sx*0.18,0.22,sz*0.18); g.add(l);
-  }
-  g.position.set(cx,0.04,cz); g.rotation.y=rot; scene.add(g);
-}
-function counter(x0,z0,x1,z1,h=0.90){
-  box(x1-x0,h,z1-z0,M.white,(x0+x1)/2,h/2,(z0+z1)/2,true);
-  box(x1-x0+0.04,0.05,z1-z0+0.04,M.stone,(x0+x1)/2,h+0.02,(z0+z1)/2,false);
-}
-function toilet(cx,cz,rot=0){
-  const g=new THREE.Group();
-  const b=new THREE.Mesh(new THREE.BoxGeometry(0.38,0.42,0.62),M.white); b.position.y=0.21;
-  const t=new THREE.Mesh(new THREE.BoxGeometry(0.40,0.52,0.20),M.white); t.position.set(0,0.30,-0.32);
-  const s=new THREE.Mesh(new THREE.BoxGeometry(0.40,0.06,0.50),M.white); s.position.set(0,0.44,0.04);
-  [b,t,s].forEach(o=>{o.castShadow=true;g.add(o)});
-  g.position.set(cx,0.04,cz); g.rotation.y=rot; scene.add(g);
-}
-function basin(cx,cz,w=0.60,rot=0){
-  const g=new THREE.Group();
-  const c=new THREE.Mesh(new THREE.BoxGeometry(w,0.78,0.50),M.wood); c.position.y=0.39;
-  const t=new THREE.Mesh(new THREE.BoxGeometry(w+0.04,0.05,0.54),M.stone); t.position.y=0.80;
-  const bo=new THREE.Mesh(new THREE.CylinderGeometry(0.17,0.14,0.14,20),M.white); bo.position.y=0.89;
-  const fa=new THREE.Mesh(new THREE.CylinderGeometry(0.02,0.02,0.26,10),M.metal); fa.position.set(0,0.96,-0.17);
-  const mi=new THREE.Mesh(new THREE.BoxGeometry(w,0.85,0.03),
-      new THREE.MeshStandardMaterial({color:0xdfe9f2,roughness:.05,metalness:.9}));
-  mi.position.set(0,1.62,-0.24);
-  [c,t,bo,fa,mi].forEach(o=>{o.castShadow=true;g.add(o)});
-  g.position.set(cx,0.04,cz); g.rotation.y=rot; scene.add(g);
-}
-
-// 客廳
-sofa(7.75,3.55,2.55,Math.PI);
-table(7.75,2.55,1.15,0.60,0.40);
-box(1.55,0.06,0.42,M.woodD,7.75,0.56,1.05,false);      // 電視櫃檯面
-box(1.45,0.45,0.35,M.wood,7.75,0.30,1.05,true);
-box(1.30,0.75,0.05,M.dark,7.75,1.35,0.95,false);        // 電視
-box(2.60,0.02,1.90,new THREE.MeshStandardMaterial({color:0x8d7f6d,roughness:1}),7.75,0.05,2.85,false);
-// 餐廳
-table(7.70,5.55,1.65,0.92,0.74);
-chair(7.05,5.10,0.4); chair(7.70,5.02,0); chair(8.35,5.10,-0.4);
-chair(7.05,6.02,2.7); chair(7.70,6.10,Math.PI); chair(8.35,6.02,3.5);
-box(0.95,2.05,0.42,M.wood,6.55,1.06,7.55,true);         // 餐邊櫃
-// 主臥
-bed(1.85,1.95,1.70,2.05);
-wardrobe(3.25,1.10,0.62,1.85,Math.PI/2);
-box(1.15,0.45,0.42,M.wood,0.60,0.26,3.00,true);
-// 臥室二
-bed(4.85,1.75,1.45,1.95);
-wardrobe(5.75,0.85,0.60,1.30,Math.PI/2);
-// 臥室三
-bed(1.55,7.05,1.45,1.95,Math.PI/2);
-wardrobe(3.80,6.55,0.60,1.60,Math.PI/2);
-box(1.05,0.72,0.50,M.wood,3.60,0.40,7.70,true);         // 書桌
-chair(3.15,7.55,-Math.PI/2);
-// 主浴廁（浴缸＋雙面盆＋淋浴）
-box(1.72,0.58,0.80,M.white,1.35,0.33,4.15,true);        // 浴缸外體
-box(1.56,0.40,0.64,new THREE.MeshStandardMaterial({color:0xdff0f7,roughness:.1,
-   transparent:true,opacity:.55}),1.35,0.46,4.15,false);
-basin(2.85,3.80,1.10,0);
-toilet(3.55,5.30,Math.PI);
-box(0.04,2.05,1.35,M.glass,2.20,1.06,5.10,false);       // 淋浴玻璃
-box(1.55,0.02,1.35,new THREE.MeshStandardMaterial({color:0x9aa0a3,roughness:.3}),1.42,0.05,5.10,false);
-// 次浴廁
-toilet(7.10,9.95,0);
-basin(8.30,8.75,0.72,Math.PI/2);
-box(0.04,2.05,1.10,M.glass,7.75,1.06,9.70,false);
-// 廚房（ㄇ字）
-counter(3.42,8.45,6.28,9.08);
-counter(3.42,9.20,4.15,10.33);
-box(2.05,0.70,0.36,M.white,4.85,2.05,8.52,false);       // 吊櫃
-box(0.58,1.95,0.62,M.metal,5.95,1.02,9.90,true);        // 冰箱
-box(0.56,0.05,0.45,M.dark,5.15,0.96,8.72,false);        // 爐
-box(0.44,0.02,0.36,M.metal,3.90,0.96,8.72,false);       // 水槽
-// 工作陽台
-box(0.60,0.85,0.62,M.white,0.60,0.46,9.75,true);        // 洗衣機
-box(0.55,0.10,0.55,M.metal,0.60,0.93,9.75,false);
-box(0.50,0.55,0.50,M.balcF,2.55,0.31,9.85,true);        // 水槽台
-box(0.34,0.40,0.34,M.green,2.55,0.80,9.85,false);       // 植栽
-box(1.85,0.06,0.06,M.metal,1.70,2.35,8.75,false);       // 曬衣桿
-
-/* ============================================================
-   燈光
-   ============================================================ */
-const hemi = new THREE.HemisphereLight(0xdfeaff,0x6b6355,0.75); scene.add(hemi);
-const sun  = new THREE.DirectionalLight(0xfff0dc,2.3);
-sun.position.set(-7,13,-11); sun.castShadow = true;
-sun.shadow.mapSize.set(2048,2048);
-const sc = sun.shadow.camera;
-sc.left=-16; sc.right=16; sc.top=16; sc.bottom=-16; sc.near=.5; sc.far=45;
-scene.add(sun);
-const fill = new THREE.DirectionalLight(0xbdd6ff,0.5); fill.position.set(10,8,12); scene.add(fill);
-
-const ceilLights = [];
-for(const k in R){
-  const r = R[k];
-  const p = new THREE.PointLight(0xffe9c8, 5.5, 7.5, 2);
-  p.position.set((r.x0+r.x1)/2, H-0.28, (r.z0+r.z1)/2);
-  scene.add(p); ceilLights.push(p);
-  const bulb = new THREE.Mesh(new THREE.CylinderGeometry(0.16,0.20,0.07,18),
-      new THREE.MeshStandardMaterial({color:0xfff6e6,emissive:0xffdca8,emissiveIntensity:.35}));
-  bulb.position.set((r.x0+r.x1)/2,H-0.16,(r.z0+r.z1)/2); scene.add(bulb);
-}
-
-/* ============================================================
-   房間名稱標籤（俯瞰用）
-   ============================================================ */
-const labels = [];
-for(const k in R){
-  const r = R[k];
-  const cv = document.createElement('canvas'); cv.width=512; cv.height=200;
-  const c = cv.getContext('2d');
-  c.fillStyle='rgba(12,16,22,.78)'; c.roundRect(6,34,500,132,22); c.fill();
-  c.fillStyle='#fff'; c.font='bold 62px "PingFang TC",sans-serif';
-  c.textAlign='center'; c.fillText(k,256,108);
-  c.fillStyle='#9fd0ff'; c.font='36px "PingFang TC",sans-serif';
-  c.fillText(r.area.toFixed(1)+' ㎡ ／ '+(r.area/3.305785).toFixed(1)+' 坪',256,152);
-  const sp = new THREE.Sprite(new THREE.SpriteMaterial({
-      map:new THREE.CanvasTexture(cv), transparent:true, depthTest:false}));
-  sp.position.set((r.x0+r.x1)/2, H+0.9, (r.z0+r.z1)/2);
-  sp.scale.set(2.3,0.9,1); sp.visible=false; scene.add(sp); labels.push(sp);
-}
-
-/* ============================================================
-   控制
-   ============================================================ */
-const EYE = 1.62;
-const pl = new PointerLockControls(camera, renderer.domElement);
-scene.add(pl.object);
-const orbit = new OrbitControls(camera, renderer.domElement);
-orbit.enabled=false; orbit.enableDamping=true; orbit.dampingFactor=.07;
-orbit.target.set(W/2,0,D/2);
-
-let mode='walk';
-const keys={};
-addEventListener('keydown',e=>{keys[e.code]=true});
-addEventListener('keyup',e=>{keys[e.code]=false});
-
-const startEl=document.getElementById('start'), crossEl=document.getElementById('cross');
-
-/* ---------- 手機 / 平板支援 ---------- */
-// 加 ?touch=1 可強制手機模式、?touch=0 可強制電腦模式（偵測失準時的備用開關）
-const TOUCH = /[?&]touch=1/.test(location.search) ? true
-            : /[?&]touch=0/.test(location.search) ? false
-            : ( matchMedia('(pointer:coarse)').matches
-             || 'ontouchstart' in window
-             || navigator.maxTouchPoints > 0
-             || !('requestPointerLock' in document.documentElement) );
-
-const mstyle=document.createElement('style');
-mstyle.textContent =
- '#stick{position:fixed;left:20px;bottom:90px;width:124px;height:124px;border-radius:50%;'+
- 'background:rgba(18,24,34,.5);border:1px solid rgba(255,255,255,.2);z-index:20;display:none;touch-action:none}'+
- '#knob{position:absolute;left:38px;top:38px;width:48px;height:48px;border-radius:50%;'+
- 'background:rgba(120,165,225,.9);pointer-events:none}'+
- '@media (max-width:760px){#hud{max-width:190px;font-size:11px;padding:11px 13px}'+
- '#hud h1{font-size:14px}#modes button{min-width:104px;font-size:12px;padding:8px 11px}'+
- '#jump{width:104px;top:auto;bottom:14px}#jump button{font-size:11.5px;padding:5px 7px}'+
- '#note{display:none}}';
-document.head.appendChild(mstyle);
-
-const stickEl=document.createElement('div'); stickEl.id='stick';
-stickEl.innerHTML='<div id="knob"></div>';
-document.body.appendChild(stickEl);
-const knobEl=stickEl.firstElementChild;
-
-let mobF=0, mobS=0, stickId=null;
-function stickAt(t){
-  const r=stickEl.getBoundingClientRect();
-  let dx=t.clientX-(r.left+r.width/2), dy=t.clientY-(r.top+r.height/2);
-  const max=r.width/2-24, d=Math.hypot(dx,dy);
-  if(d>max && d>0){ dx*=max/d; dy*=max/d; }
-  knobEl.style.left=(r.width/2-24+dx)+'px';
-  knobEl.style.top =(r.height/2-24+dy)+'px';
-  mobS=dx/max; mobF=-dy/max;
-}
-function stickReset(){ stickId=null; mobF=mobS=0; knobEl.style.left='38px'; knobEl.style.top='38px'; }
-stickEl.addEventListener('touchstart',e=>{ const t=e.changedTouches[0]; stickId=t.identifier; stickAt(t); e.preventDefault(); },{passive:false});
-stickEl.addEventListener('touchmove', e=>{ for(const t of e.changedTouches) if(t.identifier===stickId) stickAt(t); e.preventDefault(); },{passive:false});
-const stickEnd=e=>{ for(const t of e.changedTouches) if(t.identifier===stickId) stickReset(); };
-stickEl.addEventListener('touchend',stickEnd); stickEl.addEventListener('touchcancel',stickEnd);
-
-// 手指拖曳＝轉頭
-let lookId=null, lx=0, ly=0;
-renderer.domElement.addEventListener('touchstart',e=>{
-  if(!TOUCH || mode!=='walk' || startEl.style.display!=='none') return;
-  const t=e.changedTouches[0]; lookId=t.identifier; lx=t.clientX; ly=t.clientY;
-},{passive:true});
-renderer.domElement.addEventListener('touchmove',e=>{
-  if(lookId===null || mode!=='walk') return;
-  for(const t of e.changedTouches){
-    if(t.identifier!==lookId) continue;
-    camera.rotation.y -= (t.clientX-lx)*0.005;
-    camera.rotation.x  = Math.max(-1.35, Math.min(1.35, camera.rotation.x-(t.clientY-ly)*0.005));
-    lx=t.clientX; ly=t.clientY;
-  }
-},{passive:true});
-const lookEnd=()=>{ lookId=null; };
-renderer.domElement.addEventListener('touchend',lookEnd);
-renderer.domElement.addEventListener('touchcancel',lookEnd);
-
-function walking(){ return mode==='walk' && (pl.isLocked || (TOUCH && startEl.style.display==='none')); }
-
-startEl.addEventListener('click',()=>{
-  if(mode!=='walk') return;
-  if(TOUCH){ startEl.style.display='none'; crossEl.style.display='block'; stickEl.style.display='block'; }
-  else pl.lock();
-});
-pl.addEventListener('lock',()=>{startEl.style.display='none';crossEl.style.display='block'});
-pl.addEventListener('unlock',()=>{ if(mode==='walk'&&!TOUCH){startEl.style.display='flex';crossEl.style.display='none'} });
-
-if(TOUCH){
-  document.getElementById('hint').innerHTML =
-    '<span class="k">單指拖</span>轉頭／旋轉<br>'+
-    '<span class="k">兩指</span>縮放遠近<br>'+
-    '<span class="k">左下搖桿</span>走動<br>'+
-    '<span class="k">右上角</span>切換視角';
-  document.querySelector('#start .box').innerHTML =
-    '<h2>🏠 準備進入你家</h2>'+
-    '<p>手指<b>拖曳畫面</b>＝轉頭看<br>左下角<b>搖桿</b>＝前後左右走動</p>'+
-    '<p style="color:#6b7a8d">想看整體格局，右上角有「俯瞰全屋」<br>（可以用兩指縮放、單指旋轉）</p>'+
-    '<div class="go">點擊進入</div>';
-}
-
-// 起始位置：客廳
-camera.position.set(7.75, EYE, 2.90);
-camera.lookAt(7.75, EYE, 6.5);
-camera.rotation.order='YXZ';
-
-// 俯瞰模式取景：直立手機要拉遠一點才框得住整棟
-function frameBird(){
-  const a = innerWidth/innerHeight;
-  const k = a>=1 ? 1 : Math.min(1.9, Math.max(1, 0.913/a));
-  camera.position.set(W/2+9*k, 15.5*k, D/2+13*k);
-  orbit.target.set(W/2, 1.2, D/2);
-  orbit.update();
-}
-
-function setMode(m){
-  mode=m;
-  const walk = (m==='walk');
-  orbit.enabled = !walk;
-  document.getElementById('m-walk').classList.toggle('on',walk);
-  document.getElementById('m-bird').classList.toggle('on',!walk);
-  labels.forEach(l=>l.visible=!walk);
-  roof.visible = walk ? roofOn : false;
-  document.getElementById('jump').style.display = walk?'block':'none';
-  document.getElementById('room').style.display = walk?'block':'none';
-  if(walk){
-    scene.fog.near=30;
-    startEl.style.display='flex';
-    stickEl.style.display='none'; stickReset();
-  }else{
-    pl.unlock(); crossEl.style.display='none'; startEl.style.display='none';
-    stickEl.style.display='none'; stickReset();
-    scene.fog.near=60;
-    frameBird();
-  }
-}
-let roofOn=true;
-document.getElementById('m-walk').onclick=()=>setMode('walk');
-document.getElementById('m-bird').onclick=()=>setMode('bird');
-document.getElementById('m-roof').onclick=()=>{roofOn=!roofOn; roof.visible = (mode==='walk')&&roofOn;};
-let night=false;
-document.getElementById('m-day').onclick=()=>{
-  night=!night;
-  sun.intensity   = night?0.12:2.3;
-  fill.intensity  = night?0.06:0.5;
-  hemi.intensity  = night?0.12:0.75;
-  scene.environmentIntensity = night?0.22:0.85;
-  scene.background.set(night?0x05070b:0x0e1218);
-  ceilLights.forEach(p=>p.intensity = night?11:5.5);
-  renderer.toneMappingExposure = night?1.25:1.05;
-};
-document.querySelectorAll('#jump button').forEach(b=>{
-  b.onclick=()=>{
-    const r=R[b.dataset.go]; if(!r) return;
-    if(mode!=='walk') setMode('walk');
-    camera.position.set((r.x0+r.x1)/2, EYE, (r.z0+r.z1)/2);
-    if(TOUCH){ startEl.style.display='none'; crossEl.style.display='block'; stickEl.style.display='block'; }
-  };
-});
-
-// 手機／平板：預設先給「俯瞰全屋」，比較好上手
-if(TOUCH) setMode('bird');
-
-/* ---------- 碰撞 ---------- */
-const RAD=0.26;
-function blocked(x,z,y){
-  if(x<0.32||x>W-0.32||z<0.32||z>D-0.32) return true;
-  for(const c of colliders){
-    if(c.y1 < y-0.85) continue;            // 矮過膝的東西可跨過
-    if(x>c.x0-RAD && x<c.x1+RAD && z>c.z0-RAD && z<c.z1+RAD) return true;
-  }
-  return false;
-}
-
-/* ---------- 房間偵測 ---------- */
-const roomEl=document.getElementById('room');
-function whichRoom(x,z){
-  for(const k in R){ const r=R[k];
-    if(x>=r.x0&&x<=r.x1&&z>=r.z0&&z<=r.z1) return k; }
-  return '走廊';
-}
-
-/* ---------- 迴圈 ---------- */
-const clock=new THREE.Clock();
-let lastRoom='';
-function tick(){
-  requestAnimationFrame(tick);
-  const dt=Math.min(clock.getDelta(),0.05);
-  if(walking()){
-    const sp=(keys['ShiftLeft']||keys['ShiftRight']?3.4:1.65)*dt;
-    let f=(keys['KeyW']?1:0)-(keys['KeyS']?1:0);
-    let s=(keys['KeyD']?1:0)-(keys['KeyA']?1:0);
-    if(TOUCH){ f=Math.max(-1,Math.min(1,f+mobF)); s=Math.max(-1,Math.min(1,s+mobS)); }
-    if(f||s){
-      const p=camera.position.clone();
-      const dir=new THREE.Vector3(); camera.getWorldDirection(dir); dir.y=0; dir.normalize();
-      const right=new THREE.Vector3().crossVectors(dir,new THREE.Vector3(0,1,0)).normalize();
-      const mv=dir.multiplyScalar(f*sp).add(right.multiplyScalar(s*sp));
-      const eye=camera.position.y;
-      if(!blocked(p.x+mv.x,p.z,eye)) camera.position.x+=mv.x;
-      if(!blocked(camera.position.x,p.z+mv.z,eye)) camera.position.z+=mv.z;
-    }
-    const target = keys['Space']? 2.45 : EYE;
-    camera.position.y += (target-camera.position.y)*Math.min(1,dt*7);
-    const rm=whichRoom(camera.position.x,camera.position.z);
-    if(rm!==lastRoom){
-      lastRoom=rm;
-      const r=R[rm];
-      roomEl.innerHTML = rm + '<small>' + (r? r.area.toFixed(1)+' ㎡ ／ '+(r.area/3.305785).toFixed(1)+' 坪' : '通道') + '</small>';
-    }
-  }else if(mode!=='walk'){ orbit.update(); }
-  renderer.render(scene,camera);
-}
-tick();
-
-addEventListener('resize',()=>{
-  camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth,innerHeight);
-  if(mode!=='walk') frameBird();   // 轉橫／轉直時重新取景
-});
-window.__ready = true;
-</script>
+<script type="module" src="./js/main.js" onerror="window.__a8fail && window.__a8fail('程式檔案下載失敗')"></script>
 </body>
 </html>
